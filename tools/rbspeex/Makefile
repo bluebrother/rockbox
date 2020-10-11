@@ -40,7 +40,7 @@ ifeq ($(findstring APPLE,$(CPPDEFINES)),APPLE)
 # When building for 10.4+ we need to use gcc. Otherwise clang is used, so use
 # that to determine if we need to set arch and isysroot.
 ifeq ($(findstring __clang__,$(CPPDEFINES)),__clang__)
-CFLAGS += -mmacosx-version-min=10.5
+#CFLAGS += -mmacosx-version-min=10.5
 else
 # when building libs for OS X 10.4+ build for both i386 and ppc at the same time.
 # This creates fat objects, and ar can only create the archive but not operate
