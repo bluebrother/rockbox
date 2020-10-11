@@ -202,16 +202,16 @@ macx {
     QMAKE_MAC_SDK=macosx
     contains(QT_MAJOR_VERSION, 5) {
         greaterThan(QT_MINOR_VERSION, 5) {
-            QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
-            message("Qt 5.6+ detected: setting deploy target to 10.7")
+            #QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.7
+            #message("Qt 5.6+ detected: setting deploy target to 10.7")
         }
         !greaterThan(QT_MINOR_VERSION, 5) {
             QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6
             message("Qt up to 5.5 detected: setting deploy target to 10.6")
         }
+        CONFIG += x86
     }
 
-    CONFIG += x86
     LIBS += -L/usr/local/lib \
             -framework IOKit -framework CoreFoundation -framework Carbon \
             -framework SystemConfiguration -framework CoreServices
