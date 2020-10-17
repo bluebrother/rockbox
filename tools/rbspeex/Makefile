@@ -40,7 +40,7 @@ ifeq ($(findstring APPLE,$(CPPDEFINES)),APPLE)
 # When building for 10.4+ we need to use gcc. Otherwise clang is used, so use
 # that to determine if we need to set arch and isysroot.
 ifeq ($(findstring __clang__,$(CPPDEFINES)),__clang__)
-CFLAGS += -framework CoreFoundation
+LDFLAGS += -framework CoreFoundation
 else
 # when building libs for OS X 10.4+ build for both i386 and ppc at the same time.
 # This creates fat objects, and ar can only create the archive but not operate
@@ -109,17 +109,17 @@ librbspeex.a: $(TARGET_DIR)librbspeex.a
 	
 ../rbspeexenc: $(OBJS) $(BUILD_DIR)/rbspeexenc.o librbspeex.a
 	@echo Linking ../rbspeexenc
-	$(SILENT)$(CROSS)$(CC) $(CFLAGS) $(ARCHFLAGS) -o ../rbspeexenc $(BUILD_DIR)/rbspeexenc.o \
+	$(SILENT)$(CROSS)$(CC) $(CFLAGS) $(LDFLAGS) $(ARCHFLAGS) -o ../rbspeexenc $(BUILD_DIR)/rbspeexenc.o \
 		    $(LIBS) -lm $(TARGET_DIR)librbspeex.a
 
 ../rbspeexdec: $(OBJS) librbspeex.a $(BUILD_DIR)/rbspeexdec.o
 	@echo Linking ../rbspeexdec
-	$(SILENT)$(CROSS)$(CC) $(CFLAGS) $(ARCHFLAGS) -o ../rbspeexdec $(BUILD_DIR)/rbspeexdec.o \
+	$(SILENT)$(CROSS)$(CC) $(CFLAGS) $(LDFLAGS) $(ARCHFLAGS) -o ../rbspeexdec $(BUILD_DIR)/rbspeexdec.o \
 		    $(LIBS) -lm $(TARGET_DIR)librbspeex.a
 
 %.o:
 	@echo CC $<
-	$(SILENT)$(CROSS)$(CC) $(CFLAGS) $(ARCHFLAGS) -c $< -o $@
+	$(SILENT)$(CROSS)$(CC) $(CFLAGS) $(LDFLAGS) $(ARCHFLAGS) -c $< -o $@
 
 clean:
 	$(call rm,$(OBJS) $(TARGET_DIR)librbspeex* ../rbspeexenc ../rbspeexdec)
