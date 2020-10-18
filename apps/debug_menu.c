@@ -1521,13 +1521,16 @@ static int ata_smart_attr_to_string(
             break;
 
         case RAWFMT_RAW48:
-        default:
+        default: {
+            uint32_t tmp;
+            memcpy(&tmp, w, sizeof(tmp));
             /* shows first 4 bytes of raw data as uint32 LE,
                and the ramaining 2 bytes as uint16 LE */
-            len += snprintf(buf+len, size-len, "%lu", letoh32(*((uint32_t*)w)));
+            len += snprintf(buf+len, size-len, "%lu", letoh32(tmp));
             if (w[2] && (len < size))
                 len += snprintf(buf+len, size-len, " %u", w[2]);
             break;
+        }
     }
     /* ignore trailing \0 when truncated */
     if (len >= size) len = size-1;
@@ -2525,7 +2528,7 @@ static const struct {
         { "Screendump", dbg_screendump },
 #endif
         { "Skin Engine RAM usage", dbg_skin_engine },
-#if ((CONFIG_PLATFORM & PLATFORM_NATIVE) || defined(SONY_NWZ_LINUX) || defined(AGPTEK_ROCKER) || defined(XDUOO_X3II) || defined(XDUOO_X20)) && !defined(SIMULATOR)
+#if ((CONFIG_PLATFORM & PLATFORM_NATIVE) || defined(SONY_NWZ_LINUX) || defined(HIBY_LINUX) || defined(FIIO_M3K)) && !defined(SIMULATOR)
         { "View HW info", dbg_hw_info },
 #endif
 #if (CONFIG_PLATFORM & PLATFORM_NATIVE)

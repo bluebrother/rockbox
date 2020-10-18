@@ -115,7 +115,7 @@ target/hosted/sonynwz/nvp-nwz.c
 target/hosted/sonynwz/nwz-db.c
 #endif
 
-#if ((defined(AGPTEK_ROCKER) || defined(XDUOO_X3II) || defined(XDUOO_X20) || defined(FIIO_M3K)) && !defined(SIMULATOR))
+#if ((defined(HIBY_LINUX) || defined(FIIO_M3K)) && !defined(SIMULATOR))
 drivers/lcd-memframe.c
 target/hosted/alsa-controls.c
 target/hosted/pcm-alsa.c
@@ -134,7 +134,6 @@ target/hosted/agptek/button-agptek.c
 target/hosted/agptek/debug-agptek.c
 target/hosted/agptek/power-agptek.c
 target/hosted/agptek/powermgmt-agptek.c
-target/hosted/agptek/usb-agptek.c
 #endif
 
 #if (defined(XDUOO_X3II) || defined(XDUOO_X20)) && !defined(SIMULATOR)
@@ -142,7 +141,10 @@ target/hosted/xduoo/button-xduoo.c
 target/hosted/xduoo/debug-xduoo.c
 target/hosted/xduoo/power-xduoo.c
 target/hosted/xduoo/powermgmt-xduoo.c
-target/hosted/xduoo/usb-xduoo.c
+#endif
+
+#if defined(HIBY_LINUX) && !defined(SIMULATOR)
+target/hosted/usb-hiby.c
 #endif
 
 #if (defined(FIIO_M3K)) && !defined(SIMULATOR)
@@ -153,6 +155,13 @@ target/hosted/fiio/power-fiio.c
 target/hosted/fiio/powermgmt-fiio.c
 target/hosted/fiio/system-fiio.c
 target/hosted/fiio/usb-fiio.c
+#endif
+
+#if (defined(EROS_Q)) && !defined(SIMULATOR)
+target/hosted/aigo/button-erosq.c
+target/hosted/aigo/debug-erosq.c
+target/hosted/aigo/power-erosq.c
+target/hosted/aigo/powermgmt-erosq.c
 #endif
 
 #if defined(SAMSUNG_YPR0) && !defined(SIMULATOR)
@@ -513,6 +522,8 @@ drivers/audio/rocker_codec.c
 drivers/audio/xduoolinux_codec.c
 #elif defined(HAVE_FIIO_LINUX_CODEC) && !defined(SIMULATOR)
 drivers/audio/fiiolinux_codec.c
+#elif defined(HAVE_EROSQ_LINUX_CODEC) && !defined(SIMULATOR)
+drivers/audio/erosqlinux_codec.c
 #elif defined(HAVE_SDL_AUDIO)
 drivers/audio/sdl.c
 

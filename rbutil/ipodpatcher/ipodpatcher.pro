@@ -40,6 +40,10 @@ macx {
 
 RC_FILE = ipodpatcher.rc
 
+macx {
+    LIBS += -framework CoreFoundation -framework IOKit
+}
+
 
 unix {
     target.path = /usr/local/bin

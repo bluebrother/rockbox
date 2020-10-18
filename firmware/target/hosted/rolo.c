@@ -18,6 +18,10 @@
  *
  ****************************************************************************/
 
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "config.h"
 #include "lcd.h"
 #ifdef HAVE_REMOTE_LCD
@@ -30,8 +34,8 @@
 #include "rolo.h"
 #include "rbpaths.h"
 
-#include <unistd.h>
-#include <stdio.h>
+//#define LOGF_ENABLE
+#include "logf.h"
 
 #if defined(HAVE_BOOTDATA) && !defined(SIMULATOR)
 #include "bootdata.h"
@@ -79,20 +83,39 @@ int rolo_load(const char* filename)
 #endif
 
 #ifdef HAVE_STORAGE_FLUSH
-    lcd_puts(0, 1, "Flushing storage buffers");
+    lcd_puts(0, 2, "Flushing storage buffers");
     lcd_update();
     storage_flush();
 #endif
 
-    lcd_puts(0, 1, "Executing");
+    lcd_puts(0, 3, "Executing");
     lcd_update();
 #ifdef HAVE_REMOTE_LCD
     lcd_remote_puts(0, 1, "Executing");
     lcd_remote_update();
 #endif
 
+#ifdef PIVOT_ROOT
+#define EXECDIR "/tmp"
+#else
+#define EXECDIR HOME_DIR
+#endif
+
     char buf[256];
-    snprintf(buf, sizeof(buf), "%s/%s", HOME_DIR, filename);
+#ifdef PIVOT_ROOT
+    snprintf(buf, sizeof(buf), "/bin/cp " PIVOT_ROOT "/%s " EXECDIR "/" BOOTFILE, filename);
+    logf("system: %s", buf);
+    system(buf);
+    snprintf(buf, sizeof(buf), "/bin/chmod +x " EXECDIR "/" BOOTFILE);
+    logf("system: %s", buf);
+    system(buf);
+
+    snprintf(buf, sizeof(buf), "%s/%s", EXECDIR, BOOTFILE);
+#else
+    snprintf(buf, sizeof(buf), "%s/%s", EXECDIR, filename);
+#endif
+
+    logf("execl: %s", buf);
     execl(buf, BOOTFILE, NULL);
 
     rolo_error("Failed to launch!", strerror(errno));

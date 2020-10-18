@@ -26,9 +26,16 @@
 #include "usb.h"
 #include "sysfs.h"
 #include "power.h"
-#include "power-xduoo.h"
+
+//#define LOGF_ENABLE
+#include "logf.h"
 
 static bool adb_mode = false;
+
+#ifdef HAVE_MULTIDRIVE
+void cleanup_rbhome(void);
+void startup_rbhome(void);
+#endif
 
 /* TODO: implement usb detection properly */
 int usb_detect(void)
@@ -38,6 +45,8 @@ int usb_detect(void)
 
 void usb_enable(bool on)
 {
+    logf("usb enable %d %d\n", on, adb_mode);
+
     /* Ignore usb enable/disable when ADB is enabled so we can fireup adb shell
      * without entering ums mode
      */
@@ -63,13 +72,19 @@ int disk_mount_all(void)
     {
         for (int j=0; j<2; j++)
         {
-            if (mount(dev[i], "/mnt/sd_0", fs[j], 0, NULL) == 0)
+            int rval = mount(dev[i], PIVOT_ROOT, fs[j], 0, NULL);
+            if (rval == 0 || errno == -EBUSY)
             {
+                logf("mount good! %d/%d %d %d", i, j, rval, errno);
+#ifdef HAVE_MULTIDRIVE
+                startup_rbhome();
+#endif
                 return 1;
             }
          }
     }
 
+    logf("mount failed! %d", errno);
     return 0;
 }
 
@@ -79,11 +94,21 @@ int disk_mount_all(void)
  */
 int disk_unmount_all(void)
 {
-    if (umount("/mnt/sd_0") == 0)
+#ifdef HAVE_MULTIDRIVE
+    cleanup_rbhome();
+#endif
+
+    if (umount(PIVOT_ROOT) == 0)
     {
         sysfs_set_string("/sys/class/android_usb/android0/f_mass_storage/lun/file", "/dev/mmcblk0");
+        logf("umount_all good");
         return 1;
     }
+
+    logf("umount_all failed! %d", errno);
+#ifdef HAVE_MULTIDRIVE
+    startup_rbhome();
+#endif
 
     return 0;
 }
@@ -114,5 +139,5 @@ void usb_init_device(void)
     sysfs_set_string("/sys/class/android_usb/android0/iManufacturer", "Rockbox.org");
     sysfs_set_string("/sys/class/android_usb/android0/iProduct", "Rockbox media player");
     sysfs_set_string("/sys/class/android_usb/android0/iSerial", "0123456789ABCDEF");
-    sysfs_set_string("/sys/class/android_usb/android0/f_mass_storage/inquiry_string", "xDuoo 0100");
+    sysfs_set_string("/sys/class/android_usb/android0/f_mass_storage/inquiry_string", "Rockbox 0100");
 }

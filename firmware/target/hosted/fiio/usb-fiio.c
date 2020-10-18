@@ -28,6 +28,11 @@
 #include "power.h"
 #include "power-fiio.h"
 
+#ifdef HAVE_MULTIDRIVE
+void cleanup_rbhome(void);
+void startup_rbhome(void);
+#endif
+
 const char * const sysfs_usb_online =
     "/sys/class/power_supply/usb/online";
 
@@ -39,8 +44,14 @@ int usb_detect(void)
     return present ? USB_INSERTED : USB_EXTRACTED;
 }
 
+static bool usb_enabled = 0;
+
 void usb_enable(bool on)
 {
+    if (usb_enabled == on)
+        return;
+
+    usb_enabled = on;
     if (on)
     {
 	system ("insmod /lib/modules/3.10.14/kernel/driver/usb/gadget/libcomposite.ko");
@@ -62,6 +73,9 @@ void usb_enable(bool on)
 */
 int disk_mount_all(void)
 {
+#ifdef HAVE_MULTIDRIVE
+    startup_rbhome();
+#endif
     return 1;
 }
 
@@ -71,6 +85,10 @@ int disk_mount_all(void)
  */
 int disk_unmount_all(void)
 {
+#ifdef HAVE_MULTIDRIVE
+    cleanup_rbhome();
+#endif
+
     return 1;
 }
 

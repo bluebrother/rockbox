@@ -8,7 +8,7 @@
 #
 
 # global CC options for all platforms
-CCOPTS="-W -Wall -Wundef -O -nostdlib -ffreestanding -Wstrict-prototypes -pipe -std=gnu99"
+CCOPTS="-W -Wall -Wextra -Wundef -Os -nostdlib -ffreestanding -Wstrict-prototypes -pipe -std=gnu99 -funit-at-a-time"
 
 # LD options for the core
 LDOPTS=""
@@ -136,7 +136,7 @@ app_set_lcd_size () {
 
 findarmgcc() {
   prefixtools arm-elf-eabi-
-  gccchoice="4.4.4"
+  gccchoice="4.9.4"
 }
 
 # scan the $PATH for the given command
@@ -502,6 +502,7 @@ calmrisccc () {
  GCCOPTS="-Wl\,--no-check-sections $CCOPTS"
  GCCOPTIMIZE="-fomit-frame-pointer"
  endian="big"
+ gccchoice="4.9.4"
 }
 
 coldfirecc () {
@@ -509,7 +510,7 @@ coldfirecc () {
  GCCOPTS="$CCOPTS -mcpu=5249 -malign-int -mstrict-align"
  GCCOPTIMIZE="-fomit-frame-pointer"
  endian="big"
- gccchoice="4.5.2"
+ gccchoice="4.9.4"
 }
 
 arm7tdmicc () {
@@ -1589,7 +1590,8 @@ cat <<EOF
  ==AgpTek==               252) 800               227) NW-A20 series
  240) Rocker                                     228) NWZ-A860 series
                           ==FiiO==               229) NWZ-S750 series
-                          244) M3K
+ ==AIGO==                 244) M3K
+ 245) Eros Q / K
 
 EOF
 
@@ -2587,7 +2589,6 @@ fi
     sysfont="08-Rockfont"
     if [ "$ARG_ARM_THUMB" != 0 ]; then ARG_ARM_THUMB=1; fi
     arm9tdmicc
-    GCCOPTS=`echo $GCCOPTS | sed 's/ -O / -Os /'`
     ;;
 
 
@@ -2630,7 +2631,6 @@ fi
     sysfont="08-Rockfont"
     if [ "$ARG_ARM_THUMB" != 0 ]; then ARG_ARM_THUMB=1; fi
     arm9tdmicc
-    GCCOPTS=`echo $GCCOPTS | sed 's/ -O / -Os /'`
     ;;
 
 
@@ -2675,7 +2675,6 @@ fi
     t_model="sansa-c200v2"
     if [ "$ARG_ARM_THUMB" != 0 ]; then ARG_ARM_THUMB=1; fi
     arm9tdmicc
-    GCCOPTS=`echo $GCCOPTS | sed 's/ -O / -Os /'`
     ;;
 
    60|sansaclipv2)
@@ -4056,7 +4055,7 @@ fi
     t_cpu="hosted"
     t_manufacturer="xduoo"
     t_model="xduoo_x3ii"
-#    sysfont="20-Terminus-Bold"
+    sysfont="16-Terminus"
     ;;
 
     243|xduoox20)
@@ -4079,7 +4078,7 @@ fi
     t_cpu="hosted"
     t_manufacturer="xduoo"
     t_model="xduoo_x20"
-#    sysfont="20-Terminus-Bold"
+    sysfont="16-Terminus"
     ;;
 
     244|fiiom3k)
@@ -4102,7 +4101,30 @@ fi
     t_manufacturer="fiio"
     t_model="m3k"
     mipsellinuxcc
-#    sysfont="20-Terminus-Bold"
+    sysfont="16-Terminus"
+    ;;
+
+    245|aigoerosq|erosq)
+    target_id=113
+    application=yes
+    app_type="erosq"
+    modelname="aigoerosq"
+    target="EROS_Q"
+    memory=8
+    mipsellinuxcc
+    tool="cp "
+    boottool="cp "
+    bmp2rb_mono="$rootdir/tools/bmp2rb -f 0"
+    bmp2rb_native="$rootdir/tools/bmp2rb -f 10"
+    output="rockbox.erosq"
+    bootoutput="bootloader.erosq"
+    appextra="recorder:gui:hosted"
+    plugins="yes"
+    # architecture, manufacturer and model for the target-tree build
+    t_cpu="hosted"
+    t_manufacturer="aigo"
+    t_model="erosq"
+    sysfont="16-Terminus"
     ;;
 
    250|ihifi770c)
@@ -4494,16 +4516,6 @@ echo "Using $LD $ldver"
 
 makever=`make --version | head -1`
 echo "Detected make $makever"
-
-if test "$CC" = "m68k-elf-gcc"; then
-  # convert -O to -Os to get smaller binaries!
-  GCCOPTS=`echo $GCCOPTS | sed 's/ -O / -Os /'`
-fi
-if test "$CC" = "mipsel-elf-gcc"; then
-  # convert -O to -Os to get smaller binaries!
-  GCCOPTS=`echo $GCCOPTS | sed 's/ -O / -Os /'`
-fi
-
 
 if [ "$ARG_CCACHE" = "1" ]; then
   echo "Enable ccache for building"

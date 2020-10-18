@@ -126,7 +126,6 @@ $(OBJDIR)%.c.o:
 	$(SILENT)$(call mkdir,$(dir $@))
 	$(SILENT)$(CROSS)$(CC) $(ARCHFLAGS) $(GCCFLAGS) $(CFLAGS) -MMD -c -o $@ $<
 
-
 clean:
 	$(call rm,$(OBJS) $(LIBOBJS) $(TARGET_DIR)librbspeex* ../rbspeexenc ../rbspeexdec)
 	$(call rm,$(DEPS))

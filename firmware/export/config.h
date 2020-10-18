@@ -32,14 +32,16 @@
 #define STORAGE_SD_NUM      2
 #define STORAGE_NAND_NUM    3
 #define STORAGE_RAMDISK_NUM 4
-#define STORAGE_HOSTFS_NUM  5
-#define STORAGE_NUM_TYPES   6
+#define STORAGE_USB_NUM     5
+#define STORAGE_HOSTFS_NUM  6
+#define STORAGE_NUM_TYPES   7
 
 #define STORAGE_ATA         (1 << STORAGE_ATA_NUM)
 #define STORAGE_MMC         (1 << STORAGE_MMC_NUM)
 #define STORAGE_SD          (1 << STORAGE_SD_NUM)
 #define STORAGE_NAND        (1 << STORAGE_NAND_NUM)
 #define STORAGE_RAMDISK     (1 << STORAGE_RAMDISK_NUM)
+#define STORAGE_USB         (1 << STORAGE_USB_NUM)
  /* meant for APPLICATION targets (implicit for SIMULATOR) */
 #define STORAGE_HOSTFS      (1 << STORAGE_HOSTFS_NUM)
 
@@ -162,6 +164,7 @@
 #define XDUOO_X3II_PAD     69
 #define XDUOO_X20_PAD      70
 #define FIIO_M3K_PAD       71
+#define EROSQ_PAD          72
 
 /* CONFIG_REMOTE_KEYPAD */
 #define H100_REMOTE   1
@@ -602,6 +605,8 @@ Lyre prototype 1 */
 #include "config/xduoox20.h"
 #elif defined(FIIO_M3K)
 #include "config/fiiom3k.h"
+#elif defined(EROS_Q)
+#include "config/aigoerosq.h"
 #else
 //#error "unknown hwardware platform!"
 #endif

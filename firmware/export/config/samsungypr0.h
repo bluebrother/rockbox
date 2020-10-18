@@ -7,6 +7,7 @@
 /* YP-R0 need it too of course */
 #ifndef SIMULATOR
 #define CONFIG_PLATFORM (PLATFORM_HOSTED)
+#define PIVOT_ROOT "/mnt/media0"
 #endif
 
 /* For Rolo and boot loader */
@@ -163,8 +164,9 @@
 
 /* External SD card can be mounted */
 #define CONFIG_STORAGE (STORAGE_HOSTFS|STORAGE_SD)
-#define HAVE_MULTIDRIVE
+#define HAVE_MULTIDRIVE  /* But _not_ CONFIG_STORAGE_MULTI */
 #define NUM_DRIVES 2
 #define HAVE_HOTSWAP
 #define HAVE_STORAGE_FLUSH
 #define MULTIDRIVE_DIR "/mnt/mmc"
+#define MULTIDRIVE_DEV "/sys/block/mmcblk0"

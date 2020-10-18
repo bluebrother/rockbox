@@ -292,9 +292,11 @@ unsigned long valid_bootloaders[][2] = {
 #ifdef IRIVER_H120 /* Iriver H120/H140 checksums */
     { 63788, 0x08ff01a9 }, /* 7-pre3, improved failsafe functions */
     { 48764, 0xc674323e }, /* 7-pre4. Fixed audio thump & remote bootup */
+    { 56896, 0x167f5d25 }, /* 7-pre5, various ATA fixes */
 #endif
 #ifdef IRIVER_H100
     { 48760, 0x2efc3323 }, /* 7-pre4 */
+    { 56896, 0x0cd8dad4 }, /* 7-pre5 */
 #endif
     { 0,     0 }
 };
@@ -332,7 +334,7 @@ static int get_section_address(int section)
 int flash_rockbox(const char *filename, int section)
 {
     struct flash_header hdr;
-    int pos, i, len, rc;
+    int pos, i, len/*, rc */;
     unsigned long checksum, sum;
     unsigned char *p8;
     uint16_t *p16;
@@ -388,7 +390,7 @@ int flash_rockbox(const char *filename, int section)
         rb->lcd_putsf(0, 3, "Erasing...  %d%%", (i+SEC_SIZE)*100/len);
         rb->lcd_update();
         
-        rc = cfi_erase_sector(FB + (i + pos)/2);
+        /*rc = */cfi_erase_sector(FB + (i + pos)/2);
     }
     
     /* Write the magic and size. */
@@ -458,7 +460,7 @@ void show_fatal_error(void)
 int flash_bootloader(const char *filename)
 {
     char *bootsector;
-    int pos, i, len, rc;
+    int pos, i, len/*, rc*/;
     unsigned long checksum, sum;
     unsigned char *p8;
     uint16_t *p16;
@@ -507,7 +509,7 @@ int flash_bootloader(const char *filename)
     
     /* Erase the bootloader flash section. */
     for (i = BOOTLOADER_ENTRYPOINT/SEC_SIZE; i < 0x200; i++)
-        rc = cfi_erase_sector(FB + (SEC_SIZE/2) * i);
+        /*rc =*/ cfi_erase_sector(FB + (SEC_SIZE/2) * i);
     
     pos = BOOTLOADER_ENTRYPOINT/2;
     p16 = (uint16_t *)audiobuf;

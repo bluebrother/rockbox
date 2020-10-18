@@ -15,7 +15,10 @@
 
 #ifndef SIMULATOR
 #define CONFIG_PLATFORM (PLATFORM_HOSTED)
+#define PIVOT_ROOT "/mnt"
 #endif
+
+#define HAVE_FPU
 
 #define HW_SAMPR_CAPS (SAMPR_CAP_44 | SAMPR_CAP_48 | SAMPR_CAP_88 | SAMPR_CAP_96 | SAMPR_CAP_176 | SAMPR_CAP_192)
 
@@ -24,8 +27,6 @@
 
 /* define this if you have a colour LCD */
 #define HAVE_LCD_COLOR
-
-#define HAVE_LCD_ENABLE
 
 /* define this if you want album art for this target */
 #define HAVE_ALBUMART
@@ -125,3 +126,8 @@
 #define BATTERY_CAPACITY_MIN 1100  /* min. capacity selectable */
 #define BATTERY_CAPACITY_MAX 1100 /* max. capacity selectable */
 #define BATTERY_CAPACITY_INC 0   /* capacity increment */
+
+/* ROLO */
+#define BOOTFILE_EXT "m3k"
+#define BOOTFILE     "rockbox." BOOTFILE_EXT
+#define BOOTDIR      "/.rockbox"

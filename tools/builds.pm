@@ -263,6 +263,10 @@ $releasenotes="/wiki/ReleaseNotes315";
         name => 'Samsung YP-R0',
         status => 2,
     },
+    'samsungypr1' => {
+        name => 'Samsung YP-R1',
+        status => 2,
+    },
     'samsungyps3' => {
         name => 'Samsung YP-S3',
         status => 1,
@@ -447,6 +451,10 @@ $releasenotes="/wiki/ReleaseNotes315";
     'fiiom3k' => {
         name => 'FiiO M3K',
         status => 1,
+    },
+    'aigoerosq' => {
+        name => 'AIGO EROS Q / K',
+        status => 2,
     },
     'ihifi770' => {
         name => 'Xuelin iHIFI 770',
