@@ -34,10 +34,6 @@ HEADERS += \
 
 DEFINES += RELEASE=1 _LARGEFILE64_SOURCE
 
-macx {
-    LIBS += -framework CoreFoundation -framework IOKit
-}
-
 RC_FILE = ipodpatcher.rc
 
 macx {
