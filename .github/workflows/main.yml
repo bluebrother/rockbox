@@ -74,3 +74,33 @@ jobs:
           qmake ../rbutil
           make
 
+  build-win:
+    runs-on: windows-latest
+
+    steps:
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v1
+        with:
+          path: ../Qt
+          key: ${{ runner.os }}-QtCache
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v2
+        with:
+          cached: ${{ steps.cache-qt.outputs.cache-hit }}
+          arch: win64_mingw81
+          version: 5.15.1
+
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      # Runs a single command using the runners shell
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          qmake ../rbutil
+          mingw32-make
+
