@@ -34,7 +34,7 @@ export CXX=$(EXTRALIBS_CXX)
 export AR=$(EXTRALIBS_AR)
 export ISYSROOT=$(EXTRALIB_ISYSROOT)
 
-libs: librbspeex libucl libipodpatcher libsansapatcher libmkamsboot libmktccboot libmkmpioboot libchinachippatcher libmkimxboot libmks5lboot libbzip2 libbspatch librbtomcrypt
+libs: librbspeex libucl libipodpatcher libsansapatcher libmkamsboot libmktccboot libmkmpioboot libchinachippatcher libmkimxboot libmks5lboot libbspatch libbzip2 librbtomcrypt
 
 # To support cross compiles, we explicitly pass the CC flag below for
 # all tools which override CC or CXX in their makefiles. CXX is only
