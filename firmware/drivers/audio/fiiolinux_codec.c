@@ -74,6 +74,7 @@ void audiohw_preinit(void)
     // 10 DACL Playback Volume
     // 11 DACR Playback Volume
     // 12 Low Mode Switch  (see table 25 in datasheet, not simple..)
+    audiohw_mute(false);
 }
 
 void audiohw_postinit(void)
@@ -139,6 +140,8 @@ void audiohw_mute(int mute)
 
     if (fd_hw < 0 || muted == mute)
        return;
+
+    muted = mute;
 
     if(mute)
     {
