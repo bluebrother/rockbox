@@ -31,8 +31,8 @@ jobs:
         with:
           cached: ${{ steps.cache-qt.outputs.cache-hit }}
 
-      - name: Install libusb-dev
-        run: sudo apt-get install libusb-1.0-0-dev
+      - name: Install distro packages
+        run: sudo apt-get install libusb-1.0-0-dev gstreamer1.0-plugins-base
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout
