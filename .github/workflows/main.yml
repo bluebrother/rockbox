@@ -45,6 +45,7 @@ jobs:
           cd build
           qmake ../rbutil
           make
+          make appimage
 
   build-macos:
     runs-on: macos-latest
