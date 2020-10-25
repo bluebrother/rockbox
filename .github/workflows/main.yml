@@ -50,7 +50,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: AppImage
+          name: RockboxUtility-x86_64.AppImage
           path: ${{ github.workspace }}/build/Rockbox*.AppImage
 
 
