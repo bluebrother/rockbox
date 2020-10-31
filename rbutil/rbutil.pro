@@ -63,7 +63,7 @@ macx {
         venv/bin/python -m pip install dmgbuild
 
     appbundle_merge.commands = \
-        cp -pr rbutil/RockboxUtility.app .; \
+        cp -pr rbutilqt/RockboxUtility.app .; \
         cp ipodpatcher/ipodpatcher.app/Contents/MacOS/ipodpatcher RockboxUtility.app/Contents/MacOS; \
         cp sansapatcher/sansapatcher.app/Contents/MacOS/sansapatcher RockboxUtility.app/Contents/MacOS
 
