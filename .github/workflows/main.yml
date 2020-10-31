@@ -81,6 +81,7 @@ jobs:
           cd build
           qmake ../rbutil
           make
+          make dmg
 
   build-win:
     runs-on: windows-latest
