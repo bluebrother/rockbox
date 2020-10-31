@@ -44,7 +44,7 @@ jobs:
           mkdir build
           cd build
           qmake ../rbutil
-          make
+          make -j2
           make appimage
 
       - name: Upload Artifact
@@ -80,7 +80,7 @@ jobs:
           mkdir build
           cd build
           qmake ../rbutil
-          make
+          make -j2
           make dmg
 
   build-win:
@@ -111,5 +111,5 @@ jobs:
           mkdir build
           cd build
           qmake ../rbutil
-          mingw32-make
+          mingw32-make -j2
 
