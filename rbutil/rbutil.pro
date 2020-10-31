@@ -73,7 +73,7 @@ macx {
 
     dmg.commands = \
         venv/bin/dmgbuild -s $$_PRO_FILE_PWD_/rbutilqt/dmgbuild.cfg \
-            -Dbasepath=$$_PRO_FILE_PWD_ "Rockbox Utility" RockboxUtility.dmg
+            -Dbasepath=$$_PRO_FILE_PWD_ \"Rockbox Utility\" RockboxUtility.dmg
 
     dmg.depends = appbundle_merge appbundle_deploy dmgbuild
 
