@@ -77,7 +77,7 @@ macx {
 
     dmg.depends = appbundle_merge appbundle_deploy dmgbuild
 
-    QMAKE_EXTRA_TARGETS += dmgbuild dmg
+    QMAKE_EXTRA_TARGETS += dmgbuild appbundle_merge appbundle_deploy dmg
 }
 
 
