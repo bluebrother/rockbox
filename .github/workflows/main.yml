@@ -83,6 +83,13 @@ jobs:
           make -j2
           make dmg
 
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: RockboxUtility.dmg
+          path: ${{ github.workspace }}/build/Rockbox*.dmg
+
+
   build-win:
     runs-on: windows-latest
 
