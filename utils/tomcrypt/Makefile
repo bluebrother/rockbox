@@ -25,8 +25,11 @@ endif
 CFLAGS := -O3 -g -std=c99 -Wall $(DEFINES) -Isrc/headers
 LDFLAGS :=
 
+ifeq ($(findstring __clang__,$(CPPDEFINES)),__clang__)
+CFLAGS += -mmacosx-version-min=10.5
 ifneq ($(ISYSROOT),)
 CFLAGS += -isysroot $(ISYSROOT)
+endif
 endif
 
 SOURCES := \
