@@ -34,7 +34,7 @@ struct gui_yesno
 {
     const struct text_message * main_message;
     const struct text_message * result_message[2];
-    
+
     struct viewport *vp;
     struct screen * display;
 };
@@ -63,12 +63,12 @@ static int put_message(struct screen *display,
     int i;
     for(i=0; i<message->nb_lines && i+start<max_y; i++)
     {
-        display->puts_scroll(0, i+start, 
+        display->puts_scroll(0, i+start,
                              P2STR((unsigned char *)message->message_lines[i]));
     }
     return i;
 }
-    
+
 /*
  * Draws the yesno
  *  - yn : the yesno structure
@@ -78,15 +78,16 @@ static void gui_yesno_draw(struct gui_yesno * yn)
     struct screen * display=yn->display;
     struct viewport *vp = yn->vp;
     int nb_lines, vp_lines, line_shift=0;
+    struct viewport *last_vp;
 
-    display->set_viewport(vp);
+    last_vp = display->set_viewport(vp);
     display->clear_viewport();
     nb_lines = yn->main_message->nb_lines;
     vp_lines = viewport_get_nb_lines(vp);
 
     if(nb_lines+3< vp_lines)
         line_shift=1;
-    
+
     line_shift += put_message(display, yn->main_message,
                               line_shift, vp_lines);
 #ifdef HAVE_TOUCHSCREEN
@@ -116,7 +117,7 @@ static void gui_yesno_draw(struct gui_yesno * yn)
     }
 #endif
     display->update_viewport();
-    display->set_viewport(NULL);
+    display->set_viewport(last_vp);
 }
 
 /*
@@ -133,11 +134,11 @@ static bool gui_yesno_draw_result(struct gui_yesno * yn, enum yesno_res result)
     struct screen * display=yn->display;
     if(message==NULL)
         return false;
-    display->set_viewport(vp);
+    struct viewport *last_vp = display->set_viewport(vp);
     display->clear_viewport();
     put_message(yn->display, message, 0, viewport_get_nb_lines(vp));
     display->update_viewport();
-    display->set_viewport(NULL);
+    display->set_viewport(last_vp);
     return(true);
 }
 
@@ -215,7 +216,7 @@ enum yesno_res gui_syncyesno_run(const struct text_message * main_message,
 
     if (global_settings.talk_menu)
     {
-        talk_text_message((result == YESNO_YES) ? yes_message 
+        talk_text_message((result == YESNO_YES) ? yes_message
                           : no_message, false);
         talk_force_enqueue_next();
     }

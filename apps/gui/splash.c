@@ -53,7 +53,7 @@ static void splash_internal(struct screen * screen, const char *fmt, va_list ap)
     int maxw = 0;
 
     viewport_set_defaults(&vp, screen->screen_type);
-    screen->set_viewport(&vp);
+    struct viewport *last_vp = screen->set_viewport(&vp);
 
     screen->getstringsize(" ", &space_w, &h);
     y = h;
@@ -120,7 +120,7 @@ static void splash_internal(struct screen * screen, const char *fmt, va_list ap)
     vp.y += (vp.height - height) / 2;
     vp.width = width;
     vp.height = height;
-    
+
     vp.flags |=  VP_FLAG_ALIGN_CENTER;
 #if LCD_DEPTH > 1
     if (screen->depth > 1)
@@ -157,7 +157,7 @@ static void splash_internal(struct screen * screen, const char *fmt, va_list ap)
     }
     screen->update_viewport();
 end:
-    screen->set_viewport(NULL);
+    screen->set_viewport(last_vp);
 }
 
 void splashf(int ticks, const char *fmt, ...)

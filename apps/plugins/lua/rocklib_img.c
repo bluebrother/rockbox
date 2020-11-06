@@ -1242,6 +1242,7 @@ static int get_screen(lua_State *L, int narg)
     return screen;
 }
 #else /* only SCREEN_MAIN exists */
+#define get_screen(a,b) (SCREEN_MAIN)
 #define RB_SCREEN_STRUCT(luastate, narg) \
         rb->screens[SCREEN_MAIN]
 #define RB_SCREENS(luastate, narg, func, ...) \
@@ -1379,7 +1380,12 @@ RB_WRAP(font_getstringsize)
 
 RB_WRAP(lcd_framebuffer)
 {
-    rli_wrap(L, rb->lcd_framebuffer, LCD_WIDTH, LCD_HEIGHT);
+    int screen = get_screen(L, 1);
+    static struct viewport vp;
+    rb->viewport_set_fullscreen(&vp, screen);
+    rli_wrap(L, vp.buffer->data,
+                RB_SCREEN_STRUCT(L, 1)->lcdwidth,
+                RB_SCREEN_STRUCT(L, 1)->lcdheight);
     return 1;
 }
 
@@ -1394,7 +1400,7 @@ RB_WRAP(lcd_setfont)
 static void checkint_arr(lua_State *L, int *val, int narg, int elems)
 {
     /* fills passed array of integers with lua integers from stack */
-    for (int i = 0; i < elems; i++) 
+    for (int i = 0; i < elems; i++)
         val[i] = luaL_checkint(L, narg + i);
 }
 
@@ -1532,7 +1538,7 @@ RB_WRAP(lcd_bitmap_transparent_part)
     int v[eCNT];
     checkint_arr(L, v, 2, eCNT);
 
-    RB_SCREENS(L, 9, transparent_bitmap_part, src->data, 
+    RB_SCREENS(L, 9, transparent_bitmap_part, src->data,
               v[src_x], v[src_y], v[stride], v[x], v[y], v[w], v[h]);
     return 0;
 }

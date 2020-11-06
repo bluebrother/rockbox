@@ -49,7 +49,7 @@
    but still needed for compatibility with old system */
 #define ICONS_SPACING                           2
 #define STATUSBAR_BATTERY_X_POS                 0*ICONS_SPACING
-#define STATUSBAR_BATTERY_WIDTH                 18
+#define STATUSBAR_BATTERY_WIDTH                 (2+(2*SYSFONT_WIDTH))
 #define STATUSBAR_PLUG_X_POS                    STATUSBAR_X_POS + \
                                                 STATUSBAR_BATTERY_WIDTH + \
                                                 ICONS_SPACING
@@ -58,7 +58,7 @@
                                                 STATUSBAR_BATTERY_WIDTH + \
                                                 STATUSBAR_PLUG_WIDTH + \
                                                 2*ICONS_SPACING
-#define STATUSBAR_VOLUME_WIDTH                  16
+#define STATUSBAR_VOLUME_WIDTH                  (2+(2*SYSFONT_WIDTH))
 #define STATUSBAR_ENCODER_X_POS                 STATUSBAR_X_POS + \
                                                 STATUSBAR_BATTERY_WIDTH + \
                                                 STATUSBAR_PLUG_WIDTH + \
@@ -166,7 +166,7 @@ static void gui_statusbar_init(struct gui_statusbar * bar)
     memset((void*)&(bar->lastinfo), 0, sizeof(struct status_info));
 #if CONFIG_RTC
     bar->last_tm_min = 0;
-#endif    
+#endif
 }
 
 #define GET_RECT(vp, vals,display)      do {                        \
@@ -183,6 +183,7 @@ static void gui_statusbar_init(struct gui_statusbar * bar)
 void gui_statusbar_draw(struct gui_statusbar * bar, bool force_redraw, struct viewport *vp)
 {
     struct screen * display = bar->display;
+    struct viewport *last_vp = NULL;
 
     if (!display)
         return;
@@ -215,7 +216,7 @@ void gui_statusbar_draw(struct gui_statusbar * bar, bool force_redraw, struct vi
         {
 #endif /* CONFIG_CHARGING < CHARGING_MONITOR */
             /* animate in (max.) 4 steps, starting near the current charge level */
-            if (TIME_AFTER(current_tick, bar->battery_icon_switch_tick)) 
+            if (TIME_AFTER(current_tick, bar->battery_icon_switch_tick))
             {
                 if (++bar->info.batt_charge_step > 3)
                     bar->info.batt_charge_step = bar->info.battlevel / 34;
@@ -267,20 +268,20 @@ void gui_statusbar_draw(struct gui_statusbar * bar, bool force_redraw, struct vi
 #endif
         memcmp(&(bar->info), &(bar->lastinfo), sizeof(struct status_info)))
     {
-        display->set_viewport(vp);
+        last_vp = display->set_viewport(vp);
         display->set_drawmode(DRMODE_SOLID|DRMODE_INVERSEVID);
         display->fill_viewport();
         display->set_drawmode(DRMODE_SOLID);
 
         if (bar->info.battery_state)
-            gui_statusbar_icon_battery(display, bar->info.battlevel, 
+            gui_statusbar_icon_battery(display, bar->info.battlevel,
                                        bar->info.batt_charge_step);
 #ifdef HAVE_USB_POWER
         if (bar->info.usb_inserted)
             display->mono_bitmap(bitmap_icons_7x8[Icon_USBPlug],
                                  STATUSBAR_PLUG_X_POS,
                                  STATUSBAR_Y_POS, STATUSBAR_PLUG_WIDTH,
-                                 STATUSBAR_HEIGHT);
+                                 SB_ICON_HEIGHT);
 #endif /* HAVE_USB_POWER */
 #if CONFIG_CHARGING
 #ifdef HAVE_USB_POWER
@@ -291,7 +292,7 @@ void gui_statusbar_draw(struct gui_statusbar * bar, bool force_redraw, struct vi
             display->mono_bitmap(bitmap_icons_7x8[Icon_Plug],
                                     STATUSBAR_PLUG_X_POS,
                                     STATUSBAR_Y_POS, STATUSBAR_PLUG_WIDTH,
-                                    STATUSBAR_HEIGHT);
+                                    SB_ICON_HEIGHT);
 #endif /* CONFIG_CHARGING */
 #ifdef HAVE_RECORDING
         /* turn off volume display in recording screen */
@@ -300,7 +301,7 @@ void gui_statusbar_draw(struct gui_statusbar * bar, bool force_redraw, struct vi
 #endif
             bar->redraw_volume = gui_statusbar_icon_volume(bar, bar->info.volume);
         gui_statusbar_icon_play_state(display, current_playmode() + Icon_Play);
-        
+
 #ifdef HAVE_RECORDING
         /* If in recording screen, replace repeat mode, volume
            and shuffle icons with recording info */
@@ -343,7 +344,7 @@ void gui_statusbar_draw(struct gui_statusbar * bar, bool force_redraw, struct vi
             gui_statusbar_led(display);
 #endif
         display->update_viewport();
-        display->set_viewport(NULL);
+        display->set_viewport(last_vp);
         bar->lastinfo = bar->info;
     }
 }
@@ -352,7 +353,7 @@ void gui_statusbar_draw(struct gui_statusbar * bar, bool force_redraw, struct vi
 /*
  * Print battery icon to status bar
  */
-static void gui_statusbar_icon_battery(struct screen * display, int percent, 
+static void gui_statusbar_icon_battery(struct screen * display, int percent,
                                        int batt_charge_step)
 {
     int fill, endfill;
@@ -376,7 +377,7 @@ static void gui_statusbar_icon_battery(struct screen * display, int percent,
         fill = endfill = (percent * (STATUSBAR_BATTERY_WIDTH-3) + 50) / 100;
     }
 
-#if CONFIG_CHARGING == CHARGING_MONITOR && !defined(SIMULATOR) 
+#if CONFIG_CHARGING == CHARGING_MONITOR && !defined(SIMULATOR)
     /* Certain charge controlled targets */
     /* show graphical animation when charging instead of numbers */
     if ((global_settings.battery_display) &&
@@ -439,9 +440,10 @@ static bool gui_statusbar_icon_volume(struct gui_statusbar * bar, int volume)
     unsigned int width, height;
     bool needs_redraw = false;
     int type = global_settings.volume_type;
-    struct screen * display=bar->display; 
+    struct screen * display=bar->display;
     const int minvol = sound_min(SOUND_VOLUME);
     const int maxvol = sound_max(SOUND_VOLUME);
+    const int num_decimals = sound_numdecimals(SOUND_VOLUME);
 
     if (volume < minvol)
         volume = minvol;
@@ -451,7 +453,7 @@ static bool gui_statusbar_icon_volume(struct gui_statusbar * bar, int volume)
     if (volume == minvol) {
         display->mono_bitmap(bitmap_icons_7x8[Icon_Mute],
                     STATUSBAR_VOLUME_X_POS + STATUSBAR_VOLUME_WIDTH / 2 - 4,
-                    STATUSBAR_Y_POS, 7, STATUSBAR_HEIGHT);
+                    STATUSBAR_Y_POS, 7, SB_ICON_HEIGHT);
     }
     else {
         /* We want to redraw the icon later on */
@@ -469,6 +471,8 @@ static bool gui_statusbar_icon_volume(struct gui_statusbar * bar, int volume)
         /* display volume level numerical? */
         if (type)
         {
+            if (num_decimals)
+                volume /= 10 * num_decimals;
             display->setfont(FONT_SYSFIXED);
             snprintf(buffer, sizeof(buffer), "%2d", volume);
             display->getstringsize(buffer, &width, &height);
@@ -501,7 +505,7 @@ static void gui_statusbar_icon_play_state(struct screen * display, int state)
 {
     display->mono_bitmap(bitmap_icons_7x8[state], STATUSBAR_PLAY_STATE_X_POS,
                     STATUSBAR_Y_POS, STATUSBAR_PLAY_STATE_WIDTH,
-                    STATUSBAR_HEIGHT);
+                    SB_ICON_HEIGHT);
 }
 
 /*
@@ -511,7 +515,7 @@ static void gui_statusbar_icon_play_mode(struct screen * display, int mode)
 {
     display->mono_bitmap(bitmap_icons_7x8[mode], STATUSBAR_PLAY_MODE_X_POS,
                     STATUSBAR_Y_POS, STATUSBAR_PLAY_MODE_WIDTH,
-                    STATUSBAR_HEIGHT);
+                    SB_ICON_HEIGHT);
 }
 
 /*
@@ -521,7 +525,7 @@ static void gui_statusbar_icon_shuffle(struct screen * display)
 {
     display->mono_bitmap(bitmap_icons_7x8[Icon_Shuffle],
                     STATUSBAR_SHUFFLE_X_POS, STATUSBAR_Y_POS,
-                    STATUSBAR_SHUFFLE_WIDTH, STATUSBAR_HEIGHT);
+                    STATUSBAR_SHUFFLE_WIDTH, SB_ICON_HEIGHT);
 }
 
 /*
@@ -531,7 +535,7 @@ static void gui_statusbar_icon_lock(struct screen * display)
 {
     display->mono_bitmap(bitmap_icons_5x8[Icon_Lock_Main],
                          STATUSBAR_LOCKM_X_POS, STATUSBAR_Y_POS,
-                         STATUSBAR_LOCKM_WIDTH, STATUSBAR_HEIGHT);
+                         STATUSBAR_LOCKM_WIDTH, SB_ICON_HEIGHT);
 }
 
 #ifdef HAS_REMOTE_BUTTON_HOLD
@@ -542,7 +546,7 @@ static void gui_statusbar_icon_lock_remote(struct screen * display)
 {
     display->mono_bitmap(bitmap_icons_5x8[Icon_Lock_Remote],
                          STATUSBAR_LOCKR_X_POS, STATUSBAR_Y_POS,
-                         STATUSBAR_LOCKR_WIDTH, STATUSBAR_HEIGHT);
+                         STATUSBAR_LOCKR_WIDTH, SB_ICON_HEIGHT);
 }
 #endif
 
@@ -555,7 +559,7 @@ static void gui_statusbar_led(struct screen * display)
     display->mono_bitmap(bitmap_icon_disk,
                          STATUSBAR_DISK_X_POS(display->getwidth()),
                          STATUSBAR_Y_POS, STATUSBAR_DISK_WIDTH,
-                         STATUSBAR_HEIGHT);
+                         SB_ICON_HEIGHT);
 }
 #endif
 
@@ -605,7 +609,7 @@ static int write_bitmap_number(struct screen * display, int value,
 
     for (ptr = buf; *ptr != '\0'; ptr++, x += BM_GLYPH_WIDTH)
         display->mono_bitmap(bitmap_glyphs_4x8[*ptr - '0'], x, y,
-                             BM_GLYPH_WIDTH, STATUSBAR_HEIGHT);
+                             BM_GLYPH_WIDTH, SB_ICON_HEIGHT);
     return x;
 }
 
@@ -614,7 +618,7 @@ static int write_bitmap_number(struct screen * display, int value,
  */
 static void gui_statusbar_write_format_info(struct screen * display)
 {
-    /* Can't fit info for sw codec targets in statusbar using FONT_SYSFIXED 
+    /* Can't fit info for sw codec targets in statusbar using FONT_SYSFIXED
        so must use icons */
     int rec_format = global_settings.rec_format;
     unsigned bitrk = 0; /* compiler warns about unitialized use !! */
@@ -645,7 +649,7 @@ static void gui_statusbar_write_format_info(struct screen * display)
 
     /* Show bitmap - clipping right edge if needed */
     display->mono_bitmap_part(bm, 0, 0, STATUSBAR_ENCODER_WIDTH,
-        xpos, STATUSBAR_Y_POS, width, STATUSBAR_HEIGHT);
+        xpos, STATUSBAR_Y_POS, width, SB_ICON_HEIGHT);
 
     if (rec_format == REC_FORMAT_MPA_L3)
     {
@@ -682,9 +686,9 @@ static void gui_statusbar_write_samplerate_info(struct screen * display)
                                STATUSBAR_RECFREQ_X_POS, STATUSBAR_Y_POS);
 
     /* write the 'k' */
-    display->mono_bitmap(bitmap_glyphs_4x8[Glyph_4x8_k], xpos, 
+    display->mono_bitmap(bitmap_glyphs_4x8[Glyph_4x8_k], xpos,
                          STATUSBAR_Y_POS, BM_GLYPH_WIDTH,
-                         STATUSBAR_HEIGHT);
+                         SB_ICON_HEIGHT);
 }
 
 static void gui_statusbar_icon_recording_info(struct screen * display)
@@ -700,13 +704,13 @@ static void gui_statusbar_icon_recording_info(struct screen * display)
     {
         display->mono_bitmap(bitmap_icons_5x8[Icon_Mono],
                              STATUSBAR_RECCHANNELS_X_POS , STATUSBAR_Y_POS,
-                             STATUSBAR_RECCHANNELS_WIDTH, STATUSBAR_HEIGHT);
+                             STATUSBAR_RECCHANNELS_WIDTH, SB_ICON_HEIGHT);
     }
     else
     {
         display->mono_bitmap(bitmap_icons_5x8[Icon_Stereo],
                              STATUSBAR_RECCHANNELS_X_POS, STATUSBAR_Y_POS,
-                             STATUSBAR_RECCHANNELS_WIDTH, STATUSBAR_HEIGHT);
+                             STATUSBAR_RECCHANNELS_WIDTH, SB_ICON_HEIGHT);
     }
 }
 #endif /* HAVE_RECORDING */

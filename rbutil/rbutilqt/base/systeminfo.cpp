@@ -22,11 +22,6 @@
 #include <QSettings>
 #include "Logger.h"
 
-#if defined(Q_OS_LINUX)
-#include <unistd.h>
-#endif
-
-
 // device settings
 const static struct {
     SystemInfo::SystemInfos info;
@@ -203,7 +198,7 @@ QMap<int, QStringList> SystemInfo::usbIdMap(enum MapType type)
             if(id == 0) {
                 continue;
             }
-            if(map.keys().contains(id)) {
+            if(map.contains(id)) {
                 l = map.take(id);
             }
             l.append(target);

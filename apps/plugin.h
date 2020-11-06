@@ -7,7 +7,7 @@
  *                     \/            \/     \/    \/            \/
  * $Id$
  *
- * Copyright (C) 2002 BjÃ¶rn Stenberg
+ * Copyright (C) 2002 Björn Stenberg
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -155,12 +155,12 @@ int plugin_open(char *plugin, char *parameter);
 #define PLUGIN_MAGIC 0x526F634B /* RocK */
 
 /* increase this every time the api struct changes */
-#define PLUGIN_API_VERSION 241
+#define PLUGIN_API_VERSION 243
 
 /* update this to latest version if a change to the api struct breaks
    backwards compatibility (and please take the opportunity to sort in any
    new function which are "waiting" at the end of the function table) */
-#define PLUGIN_MIN_API_VERSION 241
+#define PLUGIN_MIN_API_VERSION 243
 
 /* 239 Marks the removal of ARCHOS HWCODEC and CHARCELL */
 
@@ -204,9 +204,7 @@ struct plugin_api {
     void (*lcd_putsf)(int x, int y, const unsigned char *fmt, ...);
     bool (*lcd_puts_scroll)(int x, int y, const unsigned char* string);
     void (*lcd_scroll_stop)(void);
-    fb_data* lcd_framebuffer;
-    void (*lcd_set_viewport)(struct viewport* vp);
-    void (*lcd_set_framebuffer)(fb_data *fb);
+    struct viewport* (*lcd_set_viewport)(struct viewport* vp);
     void (*lcd_bmp_part)(const struct bitmap *bm, int src_x, int src_y,
                          int x, int y, int width, int height);
     void (*lcd_update_rect)(int x, int y, int width, int height);
@@ -314,7 +312,6 @@ struct plugin_api {
     void (*lcd_remote_mono_bitmap)(const unsigned char *src, int x, int y,
                                    int width, int height);
     void (*lcd_remote_putsxy)(int x, int y, const unsigned char *string);
-    fb_remote_data* lcd_remote_framebuffer;
     void (*lcd_remote_update)(void);
     void (*lcd_remote_update_rect)(int x, int y, int width, int height);
 #if (LCD_REMOTE_DEPTH > 1)
@@ -338,6 +335,8 @@ struct plugin_api {
     void (*viewportmanager_theme_undo)(enum screen_type screen, bool force_redraw);
     void (*viewport_set_fullscreen)(struct viewport *vp,
                                     const enum screen_type screen);
+    void (*viewport_set_buffer)(struct viewport *vp, struct frame_buffer_t *buffer,
+                                                     const enum screen_type screen);
 
 #ifdef HAVE_BACKLIGHT
     /* lcd backlight */
@@ -678,8 +677,6 @@ struct plugin_api {
     void (*pcm_play_stop)(void);
     void (*pcm_set_frequency)(unsigned int frequency);
     bool (*pcm_is_playing)(void);
-    bool (*pcm_is_paused)(void);
-    void (*pcm_play_pause)(bool play);
     size_t (*pcm_get_bytes_waiting)(void);
     void (*pcm_calculate_peaks)(int *left, int *right);
     const void* (*pcm_get_peak_buffer)(int *count);
@@ -908,7 +905,7 @@ struct plugin_api {
     void (*wheel_send_events)(bool send);
 #endif
 
-#ifdef IRIVER_H100_SERIES
+#if defined(IRIVER_H100_SERIES) || defined(IRIVER_H300_SERIES)
     /* Routines for the iriver_flash -plugin. */
     bool (*detect_original_firmware)(void);
     bool (*detect_flashed_ramimage)(void);

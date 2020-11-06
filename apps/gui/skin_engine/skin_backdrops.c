@@ -204,11 +204,37 @@ bool skin_backdrops_preload(void)
     return retval;
 }
 
-void* skin_backdrop_get_buffer(int backdrop_id)
+void skin_backdrop_set_buffer(int backdrop_id, struct skin_viewport *svp)
 {
-    if (backdrop_id < 0)
-        return NULL;
-    return backdrops[backdrop_id].buffer;
+    if (UNLIKELY(!svp))
+        return;
+    else if (backdrop_id < 0)
+    {
+#if 1
+        /* ensure the current vp has been removed so it has to be reselected */
+        screens[SCREEN_MAIN].set_viewport_ex(NULL, 0);
+#   if defined(HAVE_REMOTE_LCD)
+        screens[SCREEN_REMOTE].set_viewport_ex(NULL, 0);
+#   endif
+#endif
+        /* WARNING: vp-> buffer is invaid till viewport is set to a screen */
+        svp->vp.buffer = NULL; /*Default*/
+        return;
+    }
+
+    enum screen_type screen = backdrops[backdrop_id].screen;
+    svp->framebuf.ch_ptr = backdrops[backdrop_id].buffer;
+#if defined(HAVE_REMOTE_LCD)
+    if (screen == SCREEN_REMOTE)
+        svp->framebuf.elems = REMOTE_LCD_BACKDROP_BYTES / sizeof(fb_remote_data);
+    else
+#endif
+    {
+        svp->framebuf.elems = LCD_BACKDROP_BYTES / sizeof(fb_data);
+    }
+    svp->framebuf.stride = 0; /* default stride */
+    svp->framebuf.get_address_fn = NULL; /*Default iterator*/
+    screens[screen].viewport_set_buffer(&svp->vp, &svp->framebuf);
 }
 
 void skin_backdrop_show(int backdrop_id)

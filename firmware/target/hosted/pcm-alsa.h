@@ -25,7 +25,13 @@
 #if defined(SONY_NWZ_LINUX) || defined(HAVE_FIIO_LINUX_CODEC)
 /* Set the PCM volume in dB: each sample with have this volume applied digitally
  * before being sent to ALSA. Volume must satisfy -43 <= dB <= 0 */
-void pcm_alsa_set_digital_volume(int vol_db_l, int vol_db_r);
+void pcm_set_mixer_volume(int vol_db_l, int vol_db_r);
+#endif
+
+/* These two should be invoked in your audiohw_preinit() call! */
+void pcm_alsa_set_playback_device(const char *device);
+#if defined(HAVE_RECORDING)
+void pcm_alsa_set_capture_device(const char *device);
 #endif
 
 int pcm_alsa_get_rate(void);

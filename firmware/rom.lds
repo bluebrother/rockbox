@@ -12,8 +12,7 @@ STARTUP(target/arm/pp/crt0-pp.o)
 OUTPUT_FORMAT(elf32-littlearm)
 STARTUP(target/arm/crt0.o)
 #else
-OUTPUT_FORMAT(elf32-sh)
-STARTUP(crt0.o)
+#error "Unknown CPU"
 #endif
 
 
@@ -23,7 +22,6 @@ STARTUP(crt0.o)
 #define PLUGINSIZE 0x8000
 #endif
 
-
 #ifdef IRIVER_H100_SERIES
 #define CODECSIZE CODEC_SIZE
 #define DRAMORIG 0x31000000
@@ -31,6 +29,13 @@ STARTUP(crt0.o)
 #define IRAMSIZE 0xc000
 #define FLASHORIG 0x00100028
 #define FLASHSIZE 0x000eff80
+#elif defined(IRIVER_H300_SERIES)
+#define CODECSIZE CODEC_SIZE
+#define DRAMORIG 0x31000000
+#define IRAMORIG 0x10000000
+#define IRAMSIZE 0xc000
+#define FLASHORIG 0x00200028
+#define FLASHSIZE 0x001eff80
 #else
 #define DRAMORIG 0x09000000
 #define IRAMORIG 0x0f000000

@@ -23,6 +23,8 @@
 #include "encoderlame.h"
 #include "encoderexe.h"
 
+#include "Logger.h"
+
 /*********************************************************************
 * Encoder Base
 **********************************************************************/
@@ -56,12 +58,15 @@ EncoderBase* EncoderBase::getEncoder(QObject* parent,QString encoder)
     EncoderBase* enc;
     if(encoder == "lame")
     {
-#if defined(Q_OS_MACX)
-        /* currently not on OS X */
-        enc = new EncoderExe(encoder,parent);
-#else
         enc = new EncoderLame(parent);
-#endif
+        if (!enc->configOk())
+        {
+            LOG_WARNING() << "Could not load lame dll, falling back to command "
+                             "line lame. This is notably slower.";
+            delete enc;
+            enc = new EncoderExe(encoder, parent);
+
+        }
         return enc;
     }
     else  // rbspeex is default

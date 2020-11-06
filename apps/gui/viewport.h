@@ -55,13 +55,16 @@ void viewportmanager_init(void) INIT_ATTR;
 
 void viewportmanager_theme_enable(enum screen_type screen, bool enable,
                                  struct viewport *viewport);
-/* Force will cause a redraw even if the theme was previously and 
+/* Force will cause a redraw even if the theme was previously and
  * currently enabled (i,e the undo doing nothing).
  * Should almost always be set to false except coming out of fully skinned screens */
 void viewportmanager_theme_undo(enum screen_type screen, bool force_redraw);
 
 /* call this when a theme changed */
 void viewportmanager_theme_changed(const int);
+
+void viewport_set_buffer(struct viewport *vp, struct frame_buffer_t *buffer,
+                                                const enum screen_type screen);
 
 #ifdef HAVE_TOUCHSCREEN
 bool viewport_point_within_vp(const struct viewport *vp,

@@ -8,7 +8,7 @@
 #
 
 # global CC options for all platforms
-CCOPTS="-W -Wall -Wextra -Wundef -Os -nostdlib -ffreestanding -Wstrict-prototypes -pipe -std=gnu99 -funit-at-a-time"
+CCOPTS="-W -Wall -Wextra -Wundef -Os -nostdlib -ffreestanding -Wstrict-prototypes -pipe -std=gnu99 -funit-at-a-time -fno-delete-null-pointer-checks"
 
 # LD options for the core
 LDOPTS=""
@@ -1684,7 +1684,9 @@ fi
     bmp2rb_remotemono="$rootdir/tools/bmp2rb -f 0"
     bmp2rb_remotenative="$rootdir/tools/bmp2rb -f 0"
     output="rockbox.iriver"
+    bootoutput="bootloader.iriver"
     appextra="recorder:gui:radio"
+    flash="$pwd/rombox.iriver"
     plugins="yes"
     # toolset is the tools within the tools directory that we build for
     # this particular target.
@@ -4055,7 +4057,7 @@ fi
     t_cpu="hosted"
     t_manufacturer="xduoo"
     t_model="xduoo_x3ii"
-    sysfont="16-Terminus"
+    sysfontbl="16-Terminus"
     ;;
 
     243|xduoox20)
@@ -4078,7 +4080,7 @@ fi
     t_cpu="hosted"
     t_manufacturer="xduoo"
     t_model="xduoo_x20"
-    sysfont="16-Terminus"
+    sysfontbl="16-Terminus"
     ;;
 
     244|fiiom3k)
@@ -4101,7 +4103,7 @@ fi
     t_manufacturer="fiio"
     t_model="m3k"
     mipsellinuxcc
-    sysfont="16-Terminus"
+    sysfontbl="16-Terminus"
     ;;
 
     245|aigoerosq|erosq)
@@ -4124,7 +4126,7 @@ fi
     t_cpu="hosted"
     t_manufacturer="aigo"
     t_model="erosq"
-    sysfont="16-Terminus"
+    sysfontbl="16-Terminus"
     ;;
 
    250|ihifi770c)
@@ -4305,6 +4307,7 @@ fi
       fi
       extradefines="$extradefines -DBOOTLOADER -ffunction-sections -fdata-sections"
       bootloader="1"
+      if [ -n "${sysfontbl}" ] ; then sysfont=$sysfontbl ; fi
       echo "Bootloader build selected"
       ;;
     [Ss])
@@ -4547,9 +4550,7 @@ HOSTAR=${HOSTAR:-${AR}}
 
 if [ -z "$arch" ]; then
     cpp_defines=$(echo "" | $CPP $GCCOPTS -dD)
-    if [ -n "$(echo $cpp_defines | grep -w __sh__)" ]; then
-        arch="sh"
-    elif [ -n "$(echo $cpp_defines | grep -w __m68k__)" ]; then
+    if [ -n "$(echo $cpp_defines | grep -w __m68k__)" ]; then
         arch="m68k"
     elif [ -n "$(echo $cpp_defines | grep -w __arm__)" ]; then
         arch="arm"
