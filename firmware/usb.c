@@ -42,6 +42,14 @@
 #include "logf.h"
 #include "screendump.h"
 
+#ifndef BOOTLOADER
+#include "misc.h"
+#include "gui/yesno.h"
+#include "settings.h"
+#include "lang_enum.h"
+#include "gui/skin_engine/skin_engine.h"
+#endif
+
 /* Conditions under which we want the entire driver */
 #if !defined(BOOTLOADER) || \
      (defined(HAVE_USBSTACK) && defined(HAVE_BOOTLOADER_USB_MODE)) || \
@@ -71,7 +79,7 @@ static int usb_mmc_countdown = 0;
 #ifndef USB_EXTRA_STACK
 #   define USB_EXTRA_STACK 0x0 /*Define in firmware/export/config/[target].h*/
 #endif
-static long usb_stack[(DEFAULT_STACK_SIZE + DUMP_BMP_LINESIZE + USB_EXTRA_STACK)/sizeof(long)];
+static long usb_stack[(DEFAULT_STACK_SIZE*4 + DUMP_BMP_LINESIZE + USB_EXTRA_STACK)/sizeof(long)];
 static const char usb_thread_name[] = "usb";
 static unsigned int usb_thread_entry = 0;
 static bool usb_monitor_enabled = false;
@@ -87,7 +95,8 @@ static bool usb_host_present = false;
 static int usb_num_acks_to_expect = 0;
 static long usb_last_broadcast_tick = 0;
 #ifdef HAVE_USB_POWER
-static bool usb_charging_only = false;
+static int usb_mode = USBMODE_DEFAULT;
+static int new_usbmode = USBMODE_DEFAULT;
 #endif
 
 static int usb_release_exclusive_storage(void);
@@ -130,17 +139,15 @@ static inline bool usb_do_screendump(void)
     return false;
 }
 
-/* Power (charging-only) button */
-static inline void usb_detect_charging_only(bool detect)
-{
 #ifdef HAVE_USB_POWER
-    if (detect)
-        detect = button_status() & ~USBPOWER_BTN_IGNORE;
-
-    usb_charging_only = detect;
+void usb_set_mode(int mode)
+{
+    usb_mode = mode;
+#if defined(DX50) || defined(DX90)
+    ibasso_set_usb_mode(mode);
 #endif
-    (void)detect;
 }
+#endif
 
 #ifdef USB_FIREWIRE_HANDLING
 static inline bool usb_reboot_button(void)
@@ -201,7 +208,7 @@ static inline bool usb_configure_drivers(int for_state)
         usb_attach(); /* Powered only: attach now. */
         break;
         /* USB_POWERED: */
-    
+
     case USB_INSERTED:
 #ifdef USB_ENABLE_STORAGE
         usb_core_enable_driver(USB_DRIVER_MASS_STORAGE, true);
@@ -372,7 +379,7 @@ static void usb_set_host_present(bool present)
     }
 
 #ifdef HAVE_USB_POWER
-    if (usb_charging_only)
+    if (new_usbmode == USB_MODE_CHARGE || new_usbmode == USB_MODE_ADB)
     {
         /* Only charging is desired */
         usb_configure_drivers(USB_POWERED);
@@ -464,9 +471,50 @@ static void NORETURN_ATTR usb_thread(void)
             }
 
             usb_state = USB_POWERED;
+
             usb_stack_enable(true);
 
-            usb_detect_charging_only(true);
+            /* Power (charging-only) button */
+#ifdef HAVE_USB_POWER
+            new_usbmode = usb_mode;
+            switch (usb_mode) {
+            case USB_MODE_CHARGE:
+            case USB_MODE_ADB:
+                if (button_status() & ~USBPOWER_BTN_IGNORE)
+                    new_usbmode = USB_MODE_MASS_STORAGE;
+                break;
+#ifndef BOOTLOADER
+            case USB_MODE_ASK:
+                new_usbmode = USB_MODE_ASK;
+                break;
+#endif
+            default:
+            case USB_MODE_MASS_STORAGE:
+                if (button_status() & ~USBPOWER_BTN_IGNORE)
+                    new_usbmode = USB_MODE_CHARGE;
+                break;
+	    }
+
+#ifndef BOOTLOADER
+            if (new_usbmode == USB_MODE_ASK)
+            {
+                push_current_activity(ACTIVITY_USBSCREEN);
+                if (yesno_pop(ID2P(LANG_ENTER_USB_STORAGE_MODE_QUERY)))
+                    new_usbmode = USB_MODE_MASS_STORAGE;
+                else
+                    new_usbmode = USB_MODE_CHARGE;
+                pop_current_activity();
+                /* Force full redraw */
+//                queue_post(&button_queue, BUTTON_REDRAW, 0);
+// Alternative approach, as above is supposedly inadequate by design.
+                FOR_NB_SCREENS(i)
+                {
+                    struct screen *screen = &screens[i];
+                    screen->set_viewport(NULL);
+                }
+            }
+#endif
+#endif
 
 #ifndef USB_DETECT_BY_REQUEST
             usb_set_host_present(true);
@@ -493,8 +541,10 @@ static void NORETURN_ATTR usb_thread(void)
                 usb_slave_mode(false);
 
             usb_state = USB_EXTRACTED;
+#ifdef HAVE_USB_POWER
+	    new_usbmode = usb_mode;
+#endif
 
-            usb_detect_charging_only(false);
             usb_set_host_present(false);
             break;
             /* USB_EXTRACTED: */
@@ -597,7 +647,7 @@ static void usb_tick(void)
 #ifdef USB_FIREWIRE_HANDLING
     static int firewire_countdown = -1;
     static int last_firewire_status = false;
-#endif    
+#endif
 
     if(usb_monitor_enabled)
     {
@@ -768,13 +818,6 @@ int usb_release_exclusive_storage(void)
     return bccount;
 }
 
-#ifdef HAVE_USB_POWER
-bool usb_powered_only(void)
-{
-    return usb_state == USB_POWERED;
-}
-#endif /* HAVE_USB_POWER */
-
 #ifdef USB_ENABLE_HID
 void usb_set_hid(bool enable)
 {
@@ -782,6 +825,13 @@ void usb_set_hid(bool enable)
     usb_core_enable_driver(USB_DRIVER_HID, usb_hid);
 }
 #endif /* USB_ENABLE_HID */
+
+#ifdef HAVE_USB_POWER
+bool usb_powered_only(void)
+{
+    return usb_state == USB_POWERED;
+}
+#endif /* HAVE_USB_POWER */
 
 #elif defined(USB_NONE)
 /* Dummy functions for USB_NONE  */
@@ -814,4 +864,3 @@ void usb_wait_for_disconnect(struct event_queue *q)
    (void)q;
 }
 #endif /* USB_NONE */
-

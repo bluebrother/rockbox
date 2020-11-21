@@ -24,7 +24,7 @@
 
 ZipInstaller::ZipInstaller(QObject* parent) :
     QObject(parent),
-    m_unzip(true), m_usecache(false), m_getter(0)
+    m_unzip(true), m_usecache(false), m_getter(nullptr)
 {
 }
 
@@ -87,7 +87,7 @@ void ZipInstaller::installStart()
     m_file = m_downloadFile->fileName();
     m_downloadFile->close();
     // get the real file.
-    if(m_getter != 0) m_getter->deleteLater();
+    if(m_getter != nullptr) m_getter->deleteLater();
     m_getter = new HttpGet(this);
     if(m_usecache) {
         m_getter->setCache(true);
@@ -110,8 +110,9 @@ void ZipInstaller::downloadDone(bool error)
 
     emit logProgress(1, 1);
     if(m_getter->httpResponse() != 200 && !m_getter->isCached()) {
-        emit logItem(tr("Download error: received HTTP error %1.")
-                    .arg(m_getter->httpResponse()),LOGERROR);
+        emit logItem(tr("Download error: received HTTP error %1\n%2")
+                    .arg(m_getter->httpResponse()).arg(m_getter->errorString()),
+                         LOGERROR);
         emit done(true);
         return;
     }
@@ -187,7 +188,7 @@ void ZipInstaller::downloadDone(bool error)
     }
 
     emit logItem(tr("Creating installation log"),LOGINFO);
-    QSettings installlog(m_mountpoint + "/.rockbox/rbutil.log", QSettings::IniFormat, 0);
+    QSettings installlog(m_mountpoint + "/.rockbox/rbutil.log", QSettings::IniFormat, nullptr);
 
     installlog.beginGroup(m_logsection);
     for(int i = 0; i < zipContents.size(); i++)

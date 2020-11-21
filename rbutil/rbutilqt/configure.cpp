@@ -171,7 +171,7 @@ void Config::accept()
         errormsg += "<li>" + tr("No mountpoint given") + "</li>";
         error = true;
     }
-    else if(!QFileInfo(mountpoint).exists()) {
+    else if(!QFileInfo::exists(mountpoint)) {
         errormsg += "<li>" + tr("Mountpoint does not exist") + "</li>";
         error = true;
     }
@@ -355,8 +355,8 @@ void Config::setDevices()
     QMultiMap <QString, QString> manuf;
     for(int it = 0; it < platformList.size(); it++)
     {
-        QString curbrand = SystemInfo::platformValue(platformList.at(it),
-                    SystemInfo::CurBrand).toString();
+        QString curbrand = SystemInfo::platformValue(
+                    SystemInfo::Brand, platformList.at(it)).toString();
         manuf.insert(curbrand, platformList.at(it));
     }
 
@@ -370,7 +370,7 @@ void Config::setDevices()
     QStringList brands = manuf.uniqueKeys();
     QTreeWidgetItem *w;
     QTreeWidgetItem *w2;
-    QTreeWidgetItem *w3 = 0;
+    QTreeWidgetItem *w3 = nullptr;
 
     QString selected = RbSettings::value(RbSettings::Platform).toString();
     for(int c = 0; c < brands.size(); c++) {
@@ -384,10 +384,9 @@ void Config::setDevices()
             if(!manuf.values(brands.at(c)).contains(platformList.at(it)))
                 continue;
             // construct display name
-            QString curname = SystemInfo::platformValue(platformList.at(it),
-                                SystemInfo::CurName).toString() +
-                " (" +ServerInfo::platformValue(platformList.at(it),
-                            ServerInfo::CurStatus).toString() +")";
+            QString curname = SystemInfo::platformValue(
+                SystemInfo::Name, platformList.at(it)).toString()
+                + " (" + ServerInfo::instance()->statusAsString(platformList.at(it)) + ")";
             LOG_INFO() << "add supported device:" << brands.at(c) << curname;
             w2 = new QTreeWidgetItem(w, QStringList(curname));
             w2->setData(0, Qt::UserRole, platformList.at(it));
@@ -409,7 +408,7 @@ void Config::setDevices()
     while(widgetitem);
     // add new items
     ui.treeDevices->insertTopLevelItems(0, items);
-    if(w3 != 0) {
+    if(w3 != nullptr) {
         ui.treeDevices->setCurrentItem(w3); // hilight old selection
         ui.treeDevices->scrollToItem(w3);
     }
@@ -471,10 +470,10 @@ void Config::updateEncState()
         return;
 
     QString devname = ui.treeDevices->selectedItems().at(0)->data(0, Qt::UserRole).toString();
-    QString encoder = SystemInfo::platformValue(devname,
-                        SystemInfo::CurEncoder).toString();
-    ui.encoderName->setText(EncoderBase::getEncoderName(SystemInfo::platformValue(devname,
-                        SystemInfo::CurEncoder).toString()));
+    QString encoder = SystemInfo::platformValue(
+                        SystemInfo::Encoder, devname).toString();
+    ui.encoderName->setText(EncoderBase::getEncoderName(SystemInfo::platformValue(
+                        SystemInfo::Encoder, devname).toString()));
 
     EncoderBase* enc = EncoderBase::getEncoder(this,encoder);
 
@@ -742,8 +741,8 @@ void Config::autodetect()
                 mp = tr("(unknown)");
             }
             msg += QString("<li>%1</li>").arg(tr("%1 at %2").arg(
-                        SystemInfo::platformValue(detected.at(i).device,
-                            SystemInfo::CurPlatformName).toString(),
+                        SystemInfo::platformValue(
+                            SystemInfo::PlatformName, detected.at(i).device).toString(),
                         QDir::toNativeSeparators(mp)));
         }
         msg += "</ul>";
@@ -768,22 +767,22 @@ void Config::autodetect()
             case Autodetection::PlayerIncompatible:
                 msg += tr("Detected an unsupported player:\n%1\n"
                           "Sorry, Rockbox doesn't run on your player.")
-                          .arg(SystemInfo::platformValue(detected.at(0).device,
-                               SystemInfo::CurName).toString());
+                          .arg(SystemInfo::platformValue(
+                               SystemInfo::Name, detected.at(0).device).toString());
                 break;
             case Autodetection::PlayerMtpMode:
                 msg = tr("%1 in MTP mode found!\n"
                          "You need to change your player to MSC mode for installation. ")
-                         .arg(SystemInfo::platformValue(detected.at(0).device,
-                                    SystemInfo::CurName).toString());
+                         .arg(SystemInfo::platformValue(
+                                    SystemInfo::Name, detected.at(0).device).toString());
                 break;
             case Autodetection::PlayerWrongFilesystem:
-                if(SystemInfo::platformValue(detected.at(0).device,
-                            SystemInfo::CurBootloaderMethod) == "ipod") {
+                if(SystemInfo::platformValue(
+                            SystemInfo::BootloaderMethod, detected.at(0).device) == "ipod") {
                     msg = tr("%1 \"MacPod\" found!\n"
                             "Rockbox needs a FAT formatted Ipod (so-called \"WinPod\") "
                             "to run. ").arg(SystemInfo::platformValue(
-                                    detected.at(0).device, SystemInfo::CurName).toString());
+                                    SystemInfo::Name, detected.at(0).device).toString());
                 }
                 else {
                     msg = tr("The player contains an incompatible filesystem.\n"
@@ -962,10 +961,10 @@ void Config::configEnc()
         return;
 
     QString devname = ui.treeDevices->selectedItems().at(0)->data(0, Qt::UserRole).toString();
-    QString encoder = SystemInfo::platformValue(devname,
-                    SystemInfo::CurEncoder).toString();
-    ui.encoderName->setText(EncoderBase::getEncoderName(SystemInfo::platformValue(devname,
-                    SystemInfo::CurEncoder).toString()));
+    QString encoder = SystemInfo::platformValue(
+                    SystemInfo::Encoder, devname).toString();
+    ui.encoderName->setText(EncoderBase::getEncoderName(SystemInfo::platformValue(
+                    SystemInfo::Encoder, devname).toString()));
 
 
     EncoderBase* enc = EncoderBase::getEncoder(this,encoder);

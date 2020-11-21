@@ -21,200 +21,145 @@
 #include "systeminfo.h"
 #include "Logger.h"
 
+ServerInfo* ServerInfo::infoInstance = nullptr;
+
+ServerInfo* ServerInfo::instance()
+{
+    if (infoInstance == nullptr) {
+        infoInstance = new ServerInfo();
+    }
+    return infoInstance;
+}
+
 // server infos
 const static struct {
     ServerInfo::ServerInfos info;
     const char* name;
     const char* def;
 } ServerInfoList[] = {
-    { ServerInfo::CurReleaseVersion,    ":platform:/releaseversion", "" },
-    { ServerInfo::CurReleaseUrl,        ":platform:/releaseurl",     "" },
-    { ServerInfo::RelCandidateVersion,  ":platform:/rcversion",      "" },
-    { ServerInfo::RelCandidateUrl,      ":platform:/rcurl",          "" },
-    { ServerInfo::CurStatus,            ":platform:/status",         "Unknown" },
-    { ServerInfo::ManualPdfUrl,         ":platform:/manual_pdf",     "" },
-    { ServerInfo::ManualHtmlUrl,        ":platform:/manual_html",    "" },
-    { ServerInfo::ManualZipUrl,         ":platform:/manual_zip",     "" },
-    { ServerInfo::BleedingRevision,     "bleedingrev",               "" },
-    { ServerInfo::BleedingDate,         "bleedingdate",              "" },
-    { ServerInfo::CurDevelUrl,          ":platform:/develurl",       "" },
+    { ServerInfo::CurReleaseVersion,    "release/:platform:",           "" },
+    { ServerInfo::CurReleaseUrl,        "release/:platform:",           "" },
+    { ServerInfo::RelCandidateVersion,  "release-candidate/:platform:", "" },
+    { ServerInfo::RelCandidateUrl,      "release-candidate/:platform:", "" },
+    { ServerInfo::CurStatus,            "status/:platform:",            "-1" },
+    { ServerInfo::ManualPdfUrl,         "",                             "" },
+    { ServerInfo::ManualHtmlUrl,        "",                             "" },
+    { ServerInfo::ManualZipUrl,         "",                             "" },
+    { ServerInfo::BleedingRevision,     "bleeding/rev",                 "" },
+    { ServerInfo::BleedingDate,         "bleeding/timestamp",           "" },
+    { ServerInfo::CurDevelUrl,          "",                             "" },
 };
-
-QMap<QString, QVariant> ServerInfo::serverInfos;
 
 void ServerInfo::readBuildInfo(QString file)
 {
-    QString releaseBaseUrl = SystemInfo::value(SystemInfo::ReleaseUrl).toString();
-    QString develBaseUrl = SystemInfo::value(SystemInfo::BleedingUrl).toString();
-    QString manualBaseUrl = SystemInfo::value(SystemInfo::ManualUrl).toString();
+    if (serverSettings)
+        delete serverSettings;
+    serverSettings = new QSettings(file, QSettings::IniFormat);
+}
 
-    QSettings info(file, QSettings::IniFormat);
 
-    QString developmentRevision = info.value("bleeding/rev").toString();
-    setValue(ServerInfo::BleedingRevision, developmentRevision);
-    QDateTime date = QDateTime::fromString(info.value("bleeding/timestamp").toString(), "yyyyMMddThhmmssZ");
-    setValue(ServerInfo::BleedingDate, date.toString(Qt::ISODate));
+QVariant ServerInfo::platformValue(enum ServerInfos info, QString platform)
+{
+    // locate setting item in server info file
+    int i = 0;
+    while(ServerInfoList[i].info != info)
+        i++;
 
-    info.beginGroup("release");
-    QStringList releasekeys = info.allKeys();
-    info.endGroup();
-    info.beginGroup("release-candidate");
-    QStringList rckeys = info.allKeys();
-    info.endGroup();
+    // replace setting name
+    if(platform.isEmpty())
+        platform = RbSettings::value(RbSettings::CurrentPlatform).toString();
 
-    // get base platforms, handle variants with platforms in the loop
-    QStringList platforms = SystemInfo::platforms(SystemInfo::PlatformBaseDisabled);
-    for(int i = 0; i < platforms.size(); i++)
-    {
-        // check if there are rbutil-variants of the current platform and handle
-        // them the same time.
-        QStringList variants;
-        variants = SystemInfo::platforms(SystemInfo::PlatformVariantDisabled, platforms.at(i));
-        QString releaseVersion;
-        QString releaseUrl;
-        QString relCandidateVersion;
-        QString relCandidateUrl;
-        // support two formats for "release" sections:
-        // - <target>=<version>. In this case the URL is constructed.
-        // - <target>=<version>,<url>.
-        info.beginGroup("release");
-        if(releasekeys.contains(platforms.at(i))) {
-            QStringList entry = info.value(platforms.at(i)).toStringList();
-            releaseVersion = entry.at(0);
-            if(entry.size() > 1) {
-                releaseUrl = entry.at(1);
-            }
-            else if(!releaseVersion.isEmpty()) {
-                // construct release download URL
-                releaseUrl = releaseBaseUrl;
-                releaseUrl.replace("%MODEL%", platforms.at(i));
-                releaseUrl.replace("%RELVERSION%", releaseVersion);
-            }
-        }
-        info.endGroup();
-        // "release-candidate" section currently only support the 2nd format.
-        info.beginGroup("release-candidate");
-        if(rckeys.contains(platforms.at(i))) {
-            QStringList entry = info.value(platforms.at(i)).toStringList();
-            if(entry.size() > 1) {
-                relCandidateVersion = entry.at(0);
-                relCandidateUrl = entry.at(1);
-            }
-        }
-        info.endGroup();
+    // split of variant for platform.
+    // we can have an optional variant part in the platform string.
+    // For build info we don't use that.
+    platform = platform.split('.').at(0);
 
-        // "bleeding" section (development) does not provide individual
-        // information but only a global revision value.
-        QString develUrl = develBaseUrl;
-        develUrl.replace("%MODEL%", platforms.at(i));
-        develUrl.replace("%RELVERSION%", developmentRevision);
+    QString s = ServerInfoList[i].name;
+    s.replace(":platform:", platform);
 
-        info.beginGroup("status");
-        QString status = tr("Unknown");
-        switch(info.value(platforms.at(i), -1).toInt())
+    // get value
+    QVariant value = QString();
+    if(!s.isEmpty() && serverSettings)
+        value = serverSettings->value(s, ServerInfoList[i].def);
+
+    // depending on the actual value we need more replacements.
+    switch(info) {
+    case CurReleaseVersion:
+    case RelCandidateVersion:
+        value = value.toStringList().at(0);
+        break;
+    case CurReleaseUrl:
+    case RelCandidateUrl:
         {
-            case 0:
-                status = tr("Stable (Retired)");
-                break;
-            case 1:
-                status = tr("Unusable");
-                break;
-            case 2:
-                status = tr("Unstable");
-                break;
-            case 3:
-                status = tr("Stable");
-                break;
-            default:
-                break;
+            QString version = value.toStringList().at(0);
+            if(value.toStringList().size() > 1)
+                value = value.toStringList().at(1);
+            else if(!version.isEmpty() && info == CurReleaseUrl)
+                value = SystemInfo::value(SystemInfo::ReleaseUrl).toString()
+                    .replace("%MODEL%", platform)
+                    .replace("%RELVERSION%", version);
+            else if(!version.isEmpty() && info == RelCandidateUrl)
+                value = SystemInfo::value(SystemInfo::CandidateUrl).toString()
+                    .replace("%MODEL%", platform)
+                    .replace("%RELVERSION%", version);
         }
-        info.endGroup();
-
-        // manual URLs
-        QString manualPdfUrl = manualBaseUrl;
-        QString manualHtmlUrl = manualBaseUrl;
-        QString manualZipUrl = manualBaseUrl;
-
-        QString buildservermodel = SystemInfo::platformValue(platforms.at(i),
-                SystemInfo::CurBuildserverModel).toString();
-        QString modelman = SystemInfo::platformValue(platforms.at(i),
-                SystemInfo::CurManual).toString();
-        QString manualBaseName = "rockbox-";
-
-        if(modelman.isEmpty()) manualBaseName += buildservermodel;
-        else manualBaseName += modelman;
-
-        manualPdfUrl.replace("%EXTENSION%", "pdf");
-        manualPdfUrl.replace("%MANUALBASENAME%", manualBaseName);
-        manualHtmlUrl.replace("%EXTENSION%", "html");
-        manualHtmlUrl.replace("%MANUALBASENAME%", manualBaseName + "/rockbox-build");
-        manualZipUrl.replace("%EXTENSION%", "zip");
-        manualZipUrl.replace("%MANUALBASENAME%", manualBaseName + "-html");
-
-        // set variants (if any)
-        for(int j = 0; j < variants.size(); ++j) {
-            setPlatformValue(variants.at(j), ServerInfo::CurStatus, status);
-            if(!releaseUrl.isEmpty()) {
-                setPlatformValue(variants.at(j), ServerInfo::CurReleaseVersion, releaseVersion);
-                setPlatformValue(variants.at(j), ServerInfo::CurReleaseUrl, releaseUrl);
-            }
-            if(!relCandidateUrl.isEmpty()) {
-                setPlatformValue(variants.at(j), ServerInfo::RelCandidateVersion, relCandidateVersion);
-                setPlatformValue(variants.at(j), ServerInfo::RelCandidateUrl, relCandidateUrl);
-            }
-            setPlatformValue(variants.at(j), ServerInfo::CurDevelUrl, develUrl);
-
-            setPlatformValue(variants.at(j), ServerInfo::ManualPdfUrl, manualPdfUrl);
-            setPlatformValue(variants.at(j), ServerInfo::ManualHtmlUrl, manualHtmlUrl);
-            setPlatformValue(variants.at(j), ServerInfo::ManualZipUrl, manualZipUrl);
+        break;
+    case CurDevelUrl:
+        value = SystemInfo::value(SystemInfo::BleedingUrl).toString()
+                .replace("%MODEL%", platform);
+        break;
+    case ManualPdfUrl:
+    case ManualZipUrl:
+    case ManualHtmlUrl:
+        {
+            QString url = SystemInfo::value(SystemInfo::ManualUrl).toString();
+            QString modelman = SystemInfo::platformValue(
+                    SystemInfo::Manual, platform).toString();
+            url.replace("%MODEL%", modelman.isEmpty() ? platform : modelman);
+            if(info == ManualPdfUrl)
+                url.replace("%FORMAT%", ".pdf");
+            else if(info == ManualZipUrl)
+                url.replace("%FORMAT%", "-html.zip");
+            else if(info == ManualHtmlUrl)
+                url.replace("%FORMAT%", "/rockbox-build.html");
+            value = url;
         }
+        break;
+    case BleedingDate:
+        // TODO: get rid of this, it's location specific.
+        value = QDateTime::fromString(value.toString(),
+                                      "yyyyMMddThhmmssZ").toString(Qt::ISODate);
+        break;
+
+    default:
+        break;
     }
+
+    LOG_INFO() << "Server:" << value;
+    return value;
 }
 
-
-QVariant ServerInfo::value(enum ServerInfos info)
+QString ServerInfo::statusAsString(QString platform)
 {
-    // locate info item
-    int i = 0;
-    while(ServerInfoList[i].info != info)
-        i++;
+    QString value;
+    switch(platformValue(CurStatus, platform).toInt())
+    {
+    case STATUS_RETIRED:
+        value = tr("Stable (Retired)");
+        break;
+    case STATUS_UNUSABLE:
+        value = tr("Unusable");
+        break;
+    case STATUS_UNSTABLE:
+        value = tr("Unstable");
+        break;
+    case STATUS_STABLE:
+        value = tr("Stable");
+        break;
+    default:
+        value = tr("Unknown");
+        break;
+    }
 
-    QString s = ServerInfoList[i].name;
-    s.replace(":platform:", RbSettings::value(RbSettings::CurrentPlatform).toString());
-    LOG_INFO() << "GET:" << s << serverInfos.value(s, ServerInfoList[i].def).toString();
-    return serverInfos.value(s, ServerInfoList[i].def);
-}
-
-void ServerInfo::setValue(enum ServerInfos setting, QVariant value)
-{
-   QString empty;
-   return setPlatformValue(empty, setting, value);
-}
-
-void ServerInfo::setPlatformValue(QString platform, enum ServerInfos info, QVariant value)
-{
-    // locate setting item
-    int i = 0;
-    while(ServerInfoList[i].info != info)
-        i++;
-
-    QString s = ServerInfoList[i].name;
-    s.replace(":platform:", platform);
-    serverInfos.insert(s, value);
-    LOG_INFO() << "SET:" << s << serverInfos.value(s).toString();
-}
-
-QVariant ServerInfo::platformValue(QString platform, enum ServerInfos info)
-{
-    // locate setting item
-    int i = 0;
-    while(ServerInfoList[i].info != info)
-        i++;
-
-    QString s = ServerInfoList[i].name;
-    s.replace(":platform:", platform);
-    QString d = ServerInfoList[i].def;
-    d.replace(":platform:", platform);
-    LOG_INFO() << "GET:" << s << serverInfos.value(s, d).toString();
-    return serverInfos.value(s, d);
+    return value;
 }

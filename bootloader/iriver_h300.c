@@ -43,11 +43,12 @@
 #include "power.h"
 #include "powermgmt.h"
 #include "file.h"
+#include "eeprom_settings.h"
+#include "rbunicode.h"
 #include "pcf50606.h"
 #include "common.h"
 #include "rb-loader.h"
 #include "loader_strerror.h"
-#include "rbunicode.h"
 #include "isp1362.h"
 #include "version.h"
 
@@ -57,6 +58,12 @@
 #define MAX_LOADSIZE (10*1024*1024)
 
 #define DRAM_START 0x31000000
+
+/* From common.c */
+extern int line;
+extern int remote_line;
+
+static bool recovery_mode = false;
 
 /* Reset the cookie for the crt0 crash check */
 inline void __reset_cookie(void)
@@ -86,25 +93,74 @@ void start_firmware(void)
     asm(" jmp (%a0)");
 }
 
+void start_flashed_romimage(void)
+{
+    uint8_t *src = (uint8_t *)FLASH_ROMIMAGE_ENTRY;
+    uint32_t *reset_vector;
+
+    if (!detect_flashed_romimage())
+        return ;
+
+    reset_vector = (uint32_t *)(&src[sizeof(struct flash_header)+sizeof(uint32_t)]);
+
+    asm(" move.w #0x2700,%sr");
+    __reset_cookie();
+
+    asm(" move.l %0,%%d0" :: "i"(DRAM_START));
+    asm(" movec.l %d0,%vbr");
+    asm(" move.l %0,%%sp" :: "m"(reset_vector[0]));
+    asm(" move.l %0,%%a0" :: "m"(reset_vector[1]));
+    asm(" jmp (%a0)");
+
+    /* Failure */
+    power_off();
+}
+
+void start_flashed_ramimage(void)
+{
+    struct flash_header hdr;
+    uint8_t *buf = (uint8_t *)DRAM_START;
+    uint8_t *src = (uint8_t *)FLASH_RAMIMAGE_ENTRY;
+
+    if (!detect_flashed_ramimage())
+         return;
+
+    /* Load firmware from flash */
+    cpu_boost(true);
+    memcpy(&hdr, src, sizeof(struct flash_header));
+    src += sizeof(struct flash_header);
+    memcpy(buf, src, hdr.length);
+    cpu_boost(false);
+
+    start_firmware();
+
+    /* Failure */
+    power_off();
+}
+
 void shutdown(void)
 {
     printf("Shutting down...");
-    
+    /* Reset the rockbox crash check. */
+    firmware_settings.bl_version = 0;
+    eeprom_settings_store();
+
     /* We need to gracefully spin down the disk to prevent clicks. */
     if (ide_powered())
     {
         /* Make sure ATA has been initialized. */
         storage_init();
-        
+
         /* And put the disk into sleep immediately. */
         storage_sleepnow();
     }
 
     sleep(HZ*2);
-    
+
+    /* Backlight OFF */
     backlight_hw_off();
     remote_backlight_hw_off();
-    
+
     __reset_cookie();
     power_off();
 }
@@ -113,26 +169,191 @@ void shutdown(void)
 void check_battery(void)
 {
     int battery_voltage, batt_int, batt_frac;
-    
+
     battery_voltage = _battery_voltage();
     batt_int = battery_voltage / 1000;
     batt_frac = (battery_voltage % 1000) / 10;
 
     printf("Batt: %d.%02dV", batt_int, batt_frac);
 
-    if (battery_voltage <= 310) 
+    if (battery_voltage <= 310)
     {
         printf("WARNING! BATTERY LOW!!");
         sleep(HZ*2);
     }
 }
 
+void initialize_eeprom(void)
+{
+    if (detect_original_firmware())
+        return ;
+
+    if (!eeprom_settings_init())
+    {
+        recovery_mode = true;
+        return ;
+    }
+
+    /* If bootloader version has not been reset, disk might
+     * not be intact. */
+    if (firmware_settings.bl_version || !firmware_settings.disk_clean)
+    {
+        firmware_settings.disk_clean = false;
+        recovery_mode = true;
+    }
+
+    firmware_settings.bl_version = EEPROM_SETTINGS_BL_MINVER;
+    eeprom_settings_store();
+}
+
+void try_flashboot(void)
+{
+    if (!firmware_settings.initialized)
+        return ;
+
+    switch (firmware_settings.bootmethod)
+    {
+        case BOOT_DISK:
+            return;
+
+        case BOOT_ROM:
+            start_flashed_romimage();
+            break;
+
+        case BOOT_RAM:
+            start_flashed_ramimage();
+            break;
+
+        case BOOT_RECOVERY:
+            break;
+    }
+
+    recovery_mode = true;
+}
+
+void failsafe_menu(void)
+{
+    static const char *options[] =
+    {
+        "Boot from disk",
+        "Boot RAM image",
+        "Boot ROM image",
+        "Shutdown"
+    };
+    const int FAILSAFE_OPTIONS = sizeof(options) / sizeof(*options);
+    const long TIMEOUT = 15 * HZ;
+    long start_tick = current_tick;
+    int option = 3;
+    int button;
+    int defopt = -1;
+    char buf[32];
+    int i;
+
+    reset_screen();
+    printf("Bootloader %s", rbversion);
+    check_battery();
+    printf("=========================");
+    line += FAILSAFE_OPTIONS;
+    printf("");
+    printf("  [NAVI] to confirm.");
+    printf("  [REC] to set as default.");
+    printf("");
+
+    if (firmware_settings.initialized)
+    {
+        defopt = firmware_settings.bootmethod;
+        if (defopt < 0 || defopt >= FAILSAFE_OPTIONS)
+            defopt = option;
+    }
+
+    while (current_tick - start_tick < TIMEOUT)
+    {
+        /* Draw the menu. */
+        line = 3;
+        for (i = 0; i < FAILSAFE_OPTIONS; i++)
+        {
+            char *def = "[DEF]";
+            char *arrow = "->";
+
+            if (i != defopt)
+                def = "";
+            if (i != option)
+                arrow = "  ";
+
+            printf("%s %s %s", arrow, options[i], def);
+        }
+
+        snprintf(buf, sizeof(buf), "Time left: %lds",
+                 (TIMEOUT - (current_tick - start_tick)) / HZ);
+        lcd_puts(0, 10, buf);
+        lcd_update();
+        button = button_get_w_tmo(HZ);
+
+        if (button == BUTTON_NONE || button & SYS_EVENT)
+            continue ;
+
+        start_tick = current_tick;
+
+        /* Ignore the ON/PLAY -button because it can cause trouble
+           with the RTC alarm mod. */
+        switch (button & ~(BUTTON_ON))
+        {
+            case BUTTON_UP:
+            case BUTTON_RC_REW:
+                if (option > 0)
+                    option--;
+                break ;
+
+            case BUTTON_DOWN:
+            case BUTTON_RC_FF:
+                if (option < FAILSAFE_OPTIONS-1)
+                    option++;
+                break ;
+
+            case BUTTON_SELECT:
+            case BUTTON_RC_ON:
+                goto execute;
+
+            case BUTTON_REC:
+            case BUTTON_RC_REC:
+                if (firmware_settings.initialized)
+                {
+                    firmware_settings.bootmethod = option;
+                    eeprom_settings_store();
+                    defopt = option;
+                }
+                break ;
+        }
+    }
+
+    execute:
+
+    lcd_puts(0, 10, "Executing command...");
+    lcd_update();
+    sleep(HZ);
+    reset_screen();
+
+    switch (option)
+    {
+        case BOOT_DISK:
+            return ;
+
+        case BOOT_RAM:
+            start_flashed_ramimage();
+            printf("Image not found");
+            break;
+
+        case BOOT_ROM:
+            start_flashed_romimage();
+            printf("Image not found");
+            break;
+    }
+
+    shutdown();
+}
+
 /* From the pcf50606 driver */
 extern unsigned char pcf50606_intregs[3];
-
-/* From common.c */
-extern int line;        
-extern int remote_line;
 
 void main(void)
 {
@@ -144,8 +365,8 @@ void main(void)
     bool hold_status = false;
     int data;
     bool rtc_alarm;
-    int button;
     int mask;
+    bool usb_charge = false;
 
     /* We want to read the buttons as early as possible, before the user
        releases the ON button */
@@ -186,7 +407,8 @@ void main(void)
     /* Start with the main backlight OFF. */
     backlight_hw_init();
     backlight_hw_off();
-    
+
+    /* Remote backlight ON */
     remote_backlight_hw_on();
 
     system_init();
@@ -197,23 +419,52 @@ void main(void)
     coldfire_set_pllcr_audio_bits(DEFAULT_PLLCR_AUDIO_BITS);
     enable_irq();
 
+    initialize_eeprom();
+
     isp1362_init();
 
     adc_init();
     button_init();
-    
-    backlight_init();
+    sleep(HZ/50); /* Allow the button driver to check the buttons */
+
+    /* Only check remote hold status if remote power button was actually used. */
+    if (rc_on_button)
+    {
+        lcd_remote_init();
+
+        if (remote_button_hold())
+            hold_status = true;
+    }
+
+    /* Check main hold switch status too. */
+    if (on_button && button_hold())
+    {
+        hold_status = true;
+    }
+
+    /* Power on the hard drive early, to speed up the loading. */
+    if (!hold_status && !recovery_mode)
+    {
+        ide_power_enable(true);
+
+        if (usb_detect() != USB_INSERTED)
+            try_flashboot();
+    }
 
     lcd_init();
-    lcd_remote_init();
+
+    if (!rc_on_button)
+        lcd_remote_init();
+
     font_init();
 
     lcd_setfont(FONT_SYSFIXED);
 
+    backlight_init(); /* BUGFIX backlight_init MUST BE AFTER lcd_init */
+
     printf("Rockbox boot loader");
     printf("Version %s", rbversion);
 
-    sleep(HZ/50); /* Allow the button driver to check the buttons */
     rec_button = ((button_status() & BUTTON_REC) == BUTTON_REC)
         || ((button_status() & BUTTON_RC_REC) == BUTTON_RC_REC);
 
@@ -221,29 +472,19 @@ void main(void)
 
     if(rtc_alarm)
         printf("RTC alarm detected");
-    
-    /* Don't start if the Hold button is active on the device you
-       are starting with */
-    if ((on_button && button_hold()) ||
-         (rc_on_button && remote_button_hold()))
-    {
-        hold_status = true;
-    }
-    if (hold_status && !rtc_alarm && (usb_detect() != USB_INSERTED) && 
-        !charger_inserted())
-    {
-        if (detect_original_firmware())
-        {
-            printf("Hold switch on");
-            shutdown();
-        }
-    }
 
     /* Holding REC while starting runs the original firmware */
     if (detect_original_firmware() && rec_button)
     {
         printf("Starting original firmware...");
         start_iriver_fw();
+    }
+
+    /* enable usb charging for charge mode and disk mode */
+    if (usb_detect() == USB_INSERTED)
+    {
+        usb_charging_enable(USB_CHARGING_ENABLE);
+        usb_charge = true;
     }
 
     if(charger_inserted())
@@ -256,17 +497,17 @@ void main(void)
         bool request_start = false;
 
         cpu_idle_mode(true);
-        
+
         while(charger_inserted() && !request_start)
         {
-            button = button_get_w_tmo(HZ);
+            long button = button_get_w_tmo(HZ);
 
             switch(button)
             {
             case BUTTON_ON:
                 request_start = true;
                 break;
-                
+
             case BUTTON_NONE: /* Timeout */
 
                 if(charging_state())
@@ -280,7 +521,7 @@ void main(void)
                     blink_toggle = true;
                     msg = complete_msg;
                 }
-                
+
                 font_getstringsize(msg, &w, &h, FONT_SYSFIXED);
                 reset_screen();
                 if(blink_toggle)
@@ -289,9 +530,6 @@ void main(void)
                 check_battery();
                 break;
             }
-
-            if(usb_detect() == USB_INSERTED)
-                request_start = true;
         }
         if(!request_start)
         {
@@ -301,7 +539,7 @@ void main(void)
 
         cpu_idle_mode(false);
     }
-    
+
     usb_init();
 
     /* A hack to enter USB mode without using the USB thread */
@@ -317,6 +555,12 @@ void main(void)
         lcd_remote_puts(0, 3, msg);
         lcd_remote_update();
 
+        if (firmware_settings.initialized)
+        {
+            firmware_settings.disk_clean = false;
+            eeprom_settings_store();
+        }
+
         ide_power_enable(true);
         storage_enable(false);
         sleep(HZ/20);
@@ -328,7 +572,7 @@ void main(void)
             line = 0;
             remote_line = 0;
             check_battery();
-            
+
             storage_spin(); /* Prevent the drive from spinning down */
             sleep(HZ);
         }
@@ -338,6 +582,28 @@ void main(void)
 
         reset_screen();
         lcd_update();
+    }
+
+    /* disable usb charging if we enabled it earlier */
+    if (usb_charge)
+    {
+        usb_charging_enable(USB_CHARGING_DISABLE);
+        usb_charge = false;
+    }
+
+    /* recheck the hold switch status as it may have changed */
+    hold_status = (button_hold() || remote_button_hold());
+
+    /* hold switch shutdown or failsafe recovery mode */
+    if (hold_status || recovery_mode)
+    {
+        if (detect_original_firmware())
+        {
+            printf("Hold switch on");
+            shutdown();
+        }
+
+        failsafe_menu();
     }
 
     rc = storage_init();
@@ -396,9 +662,9 @@ unsigned short *bidi_l2v(const unsigned char *str, int orientation)
     static unsigned short utf16_buf[SCROLL_LINE_SIZE];
     unsigned short *target;
     (void)orientation;
-    
+
     target = utf16_buf;
-    
+
     while (*str)
         str = utf8decode(str, target++);
     *target = 0;

@@ -252,7 +252,7 @@ void RbUtilQt::downloadDone(bool error)
 
     // read info into ServerInfo object
     buildInfo.open();
-    ServerInfo::readBuildInfo(buildInfo.fileName());
+    ServerInfo::instance()->readBuildInfo(buildInfo.fileName());
     buildInfo.close();
 
     ui.statusbar->showMessage(tr("Download build information finished."), 5000);
@@ -282,12 +282,37 @@ void RbUtilQt::about()
     QTextStream c(&licence);
     about.browserLicense->insertHtml(c.readAll());
     about.browserLicense->moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
+    licence.close();
 
-    QFile speexlicense(":/docs/COPYING.SPEEX");
-    speexlicense.open(QIODevice::ReadOnly);
-    QTextStream s(&speexlicense);
-    about.browserSpeexLicense->insertHtml("<pre>" + s.readAll() + "</pre>");
-    about.browserSpeexLicense->moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
+    QString html = "<p>" + tr("Libraries used") + "</p>";
+    html += "<ul>";
+    html += "<li>Speex: <a href='#speex'>Speex License</a></li>";
+    html += "<li>bspatch: <a href='#bspatch'>bspatch License</a></li>";
+    html += "<li>bzip2: <a href='#bzip2'>bzip2 License</a></li>";
+    html += "<li>mspack: <a href='#lgpl2'>LGPL v2.1 License</a></li>";
+    html += "<li>quazip: <a href='#lgpl2'>LGPL v2.1 License</a></li>";
+    html += "<li>tomcrypt: <a href='#tomcrypt'>Tomcrypt License</a></li>";
+    html += "<li>CuteLogger: <a href='#lgpl2'>LGPL v2.1 License</a></li>";
+    html += "</ul>";
+    about.browserLicenses->insertHtml(html);
+
+    QMap<QString, QString> licenses;
+    licenses[":/docs/COPYING.SPEEX"] = "<a id='speex'>Speex License</a>";
+    licenses[":/docs/lgpl-2.1.txt"] = "<a id='lgpl2'>LGPL v2.1</a>";
+    licenses[":/docs/LICENSE.TOMCRYPT"] = "<a id='tomcrypt'>Tomcrypt License</a>";
+    licenses[":/docs/LICENSE.BZIP2"] = "<a id='bzip2'>bzip2 License</a>";
+    licenses[":/docs/LICENSE.BSPATCH"] = "<a id='bspatch'>bspatch License</a>";
+
+    for (int i = 0; i < licenses.size(); i++) {
+        QString key = licenses.keys().at(i);
+        QFile license(key);
+        license.open(QIODevice::ReadOnly);
+        QTextStream s(&license);
+        about.browserLicenses->insertHtml("<hr/><h2>" + licenses[key] + "</h2><br/>\n");
+        about.browserLicenses->insertHtml("<pre>" + s.readAll() + "</pre>");
+        license.close();
+    }
+    about.browserLicenses->moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
 
     QFile credits(":/docs/CREDITS");
     credits.open(QIODevice::ReadOnly);
@@ -304,6 +329,7 @@ void RbUtilQt::about()
         line.remove(QRegExp("^People.*"));
         about.browserCredits->append(line);
     }
+    credits.close();
     about.browserCredits->moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
     QString title = QString("<b>The Rockbox Utility</b><br/>Version %1").arg(FULLVERSION);
     about.labelTitle->setText(title);
@@ -345,7 +371,7 @@ void RbUtilQt::updateSettings()
                 " or review your settings."));
         configDialog();
     }
-    else if(chkConfig(0)) {
+    else if(chkConfig(nullptr)) {
         QApplication::processEvents();
         QMessageBox::critical(this, tr("Configuration error"),
             tr("Your configuration is invalid. This is most likely due "
@@ -364,25 +390,25 @@ void RbUtilQt::updateDevice()
 
     /* Enable bootloader installation, if possible */
     bool bootloaderInstallable =
-        SystemInfo::value(SystemInfo::CurBootloaderMethod) != "none";
+        SystemInfo::platformValue(SystemInfo::BootloaderMethod) != "none";
 
     /* Enable bootloader uninstallation, if possible */
     bool bootloaderUninstallable = bootloaderInstallable &&
-        SystemInfo::value(SystemInfo::CurBootloaderMethod) != "fwpatcher";
+        SystemInfo::platformValue(SystemInfo::BootloaderMethod) != "fwpatcher";
     ui.labelRemoveBootloader->setEnabled(bootloaderUninstallable);
     ui.buttonRemoveBootloader->setEnabled(bootloaderUninstallable);
     ui.actionRemove_bootloader->setEnabled(bootloaderUninstallable);
 
     /* Disable the whole tab widget if configuration is invalid */
-    bool configurationValid = !chkConfig(0);
+    bool configurationValid = !chkConfig(nullptr);
     ui.tabWidget->setEnabled(configurationValid);
     ui.menuA_ctions->setEnabled(configurationValid);
 
     // displayed device info
-    QString brand = SystemInfo::value(SystemInfo::CurBrand).toString();
+    QString brand = SystemInfo::platformValue(SystemInfo::Brand).toString();
     QString name
-        = QString("%1 (%2)").arg(SystemInfo::value(SystemInfo::CurName).toString(),
-            ServerInfo::value(ServerInfo::CurStatus).toString());
+        = QString("%1 (%2)").arg(SystemInfo::platformValue(SystemInfo::Name).toString(),
+            ServerInfo::instance()->statusAsString());
     ui.labelDevice->setText(QString("<b>%1 %2</b>").arg(brand, name));
 
     QString mountpoint = RbSettings::value(RbSettings::Mountpoint).toString();
@@ -397,7 +423,7 @@ void RbUtilQt::updateDevice()
     }
 
     QPixmap pm;
-    QString m = SystemInfo::value(SystemInfo::CurPlayerPicture).toString();
+    QString m = SystemInfo::platformValue(SystemInfo::PlayerPicture).toString();
     pm.load(":/icons/players/" + m + "-small.png");
     pm = pm.scaledToHeight(QFontMetrics(QApplication::font()).height() * 3);
     ui.labelPlayerPic->setPixmap(pm);
@@ -465,7 +491,7 @@ void RbUtilQt::installVoice()
        QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
         return;
 
-    QString model = SystemInfo::value(SystemInfo::CurBuildserverModel).toString();
+    QString model = SystemInfo::platformValue(SystemInfo::BuildserverModel).toString();
     // replace placeholder in voice url
     voiceurl.replace("%MODEL%", model);
     voiceurl.replace("%RELVERSION%", relversion);
@@ -534,14 +560,14 @@ void RbUtilQt::uninstallBootloader(void)
     // create installer
     BootloaderInstallBase *bl
         = BootloaderInstallHelper::createBootloaderInstaller(this,
-                SystemInfo::value(SystemInfo::CurBootloaderMethod).toString());
+                SystemInfo::platformValue(SystemInfo::BootloaderMethod).toString());
 
-    if(bl == NULL) {
+    if(bl == nullptr) {
         logger->addItem(tr("No uninstall method for this target known."), LOGERROR);
         logger->setFinished();
         return;
     }
-    QStringList blfile = SystemInfo::value(SystemInfo::CurBootloaderFile).toStringList();
+    QStringList blfile = SystemInfo::platformValue(SystemInfo::BootloaderFile).toStringList();
     QStringList blfilepath;
     for(int a = 0; a < blfile.size(); a++) {
         blfilepath.append(RbSettings::value(RbSettings::Mountpoint).toString()
@@ -763,7 +789,7 @@ void RbUtilQt::changeEvent(QEvent *e)
     if(e->type() == QEvent::LanguageChange) {
         ui.retranslateUi(this);
         buildInfo.open();
-        ServerInfo::readBuildInfo(buildInfo.fileName());
+        ServerInfo::instance()->readBuildInfo(buildInfo.fileName());
         buildInfo.close();
         updateDevice();
     } else {

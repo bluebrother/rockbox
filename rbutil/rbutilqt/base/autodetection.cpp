@@ -108,7 +108,7 @@ void Autodetection::detectUsb()
             LOG_WARNING() << "[USB] detected problem with player" << d.device;
         }
         QString idstring = QString("%1").arg(attached.at(i), 8, 16, QChar('0'));
-        if(!SystemInfo::platformValue(idstring, SystemInfo::CurName).toString().isEmpty()) {
+        if(!SystemInfo::platformValue(SystemInfo::Name, idstring).toString().isEmpty()) {
             struct Detected d;
             d.status = PlayerIncompatible;
             d.device = idstring;
@@ -250,7 +250,7 @@ void Autodetection::mergePatcher(void)
     // try ipodpatcher
     // initialize sector buffer. Needed.
     struct ipod_t ipod;
-    ipod.sectorbuf = NULL;
+    ipod.sectorbuf = nullptr;
     ipod_alloc_buffer(&ipod, BUFFER_SIZE);
     n = ipod_scan(&ipod);
     // FIXME: handle more than one Ipod connected in ipodpatcher.

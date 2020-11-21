@@ -602,9 +602,6 @@ static const struct plugin_api rockbox_api = {
     pcm_play_stop,
     pcm_set_frequency,
     pcm_is_playing,
-    pcm_get_bytes_waiting,
-    pcm_calculate_peaks,
-    pcm_get_peak_buffer,
     pcm_play_lock,
     pcm_play_unlock,
     beep_play,
@@ -652,7 +649,6 @@ static const struct plugin_api rockbox_api = {
     mp3info,
     count_mp3_frames,
     create_xing_header,
-    find_next_frame,
 #ifdef HAVE_TAGCACHE
     tagcache_search,
     tagcache_search_set_uniqbuf,

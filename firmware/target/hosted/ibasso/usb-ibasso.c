@@ -21,15 +21,14 @@
  *
  ****************************************************************************/
 
-
 #include <stdlib.h>
 
 #include "config.h"
 #include "debug.h"
 
+#include "usb.h"
 #include "debug-ibasso.h"
 #include "usb-ibasso.h"
-
 
 static void usb_enable_adb(void)
 {
@@ -45,7 +44,6 @@ static void usb_enable_adb(void)
     DEBUGF("ERROR %s: No command processor available.", __func__);
 }
 
-
 static void usb_enable_mass_storage(void)
 {
     TRACE;
@@ -60,10 +58,8 @@ static void usb_enable_mass_storage(void)
     DEBUGF("ERROR %s: No command processor available.", __func__);
 }
 
-
 /* Default at boot not known. */
 static int _last_usb_mode = -1;
-
 
 void ibasso_set_usb_mode(int mode)
 {
@@ -89,4 +85,9 @@ void ibasso_set_usb_mode(int mode)
             }
         }
     }
+}
+
+bool usb_powered_only(void)
+{
+  return false;
 }

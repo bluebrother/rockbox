@@ -50,6 +50,7 @@ class SystemInfo : public QObject
             Wolf3DUrl,
             XWorldUrl,
             ReleaseUrl,
+            CandidateUrl,
             ReleaseVoiceUrl,
             ReleaseFontUrl,
             BuildInfoUrl,
@@ -57,18 +58,21 @@ class SystemInfo : public QObject
             ThemesUrl,
             ThemesInfoUrl,
             RbutilUrl,
-            CurPlatformName,
-            CurManual,
-            CurBootloaderMethod,
-            CurBootloaderName,
-            CurBootloaderFile,
-            CurBootloaderFilter,
-            CurEncoder,
-            CurBrand,
-            CurName,
-            CurBuildserverModel,
-            CurConfigureModel,
-            CurPlayerPicture,
+        };
+
+        enum PlatformInfo {
+            PlatformName,
+            Manual,
+            BootloaderMethod,
+            BootloaderName,
+            BootloaderFile,
+            BootloaderFilter,
+            Encoder,
+            Brand,
+            Name,
+            BuildserverModel,
+            ConfigureModel,
+            PlayerPicture,
         };
 
         enum PlatformType {
@@ -90,7 +94,7 @@ class SystemInfo : public QObject
         //! get a value from system settings
         static QVariant value(enum SystemInfos info);
         //! get a value from system settings for a named platform.
-        static QVariant platformValue(QString platform, enum SystemInfos info);
+        static QVariant platformValue(enum PlatformInfo info, QString platform = "");
 
     private:
         //! you shouldnt call this, its a fully static calls

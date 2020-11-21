@@ -585,15 +585,6 @@ bool find_albumart(const struct mp3entry *id3, char *buf, int buflen)
     \return
     \description
 
-unsigned long find_next_frame(int fd, long *offset, long max_offset, unsigned long last_header)
-    \group misc
-    \param fd
-    \param offset
-    \param max_offset
-    \param last_header
-    \return
-    \description
-
 void flush_icache(void)
     \conditions (defined(CACHE_FUNCTIONS_AS_CALL))
     \description
@@ -1402,12 +1393,6 @@ void pcm_apply_settings(void)
     \group sound
     \description
 
-void pcm_calculate_peaks(int *left, int *right)
-    \group sound
-    \param left
-    \param right
-    \description
-
 void pcm_calculate_rec_peaks(int *left, int *right)
     \group sound
     \conditions defined(HAVE_RECORDING)
@@ -1418,11 +1403,6 @@ void pcm_calculate_rec_peaks(int *left, int *right)
 void pcm_close_recording(void)
     \group sound
     \conditions defined(HAVE_RECORDING)
-    \description
-
-size_t pcm_get_bytes_waiting(void)
-    \group sound
-    \return
     \description
 
 void pcm_init_recording(void)

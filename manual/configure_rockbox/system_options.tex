@@ -203,27 +203,25 @@ therefore result in better runtime.
   }
 }
 
-\opt{swcodec}{
-  \subsection{Keyclick}
-    This menu controls key clicks on button presses.
-    \begin{description}
-    \opt{hardware_click}{
-      \item [Headphone Keyclick. ]This setting controls how strong the keyclicks
-        played through the headphones are. If set to \setting{Off}, the keyclicks
-        will be disabled.
-      \item [Speaker Keyclick. ]This setting turns playing of keyclicks through
-        the built in speaker \setting{On} or \setting{Off}.
-    }
-    \nopt{hardware_click}{
-      \item [Keyclick. ]This setting controls how strong the keyclicks are.
-        If set to \setting{Off}, the keyclicks will be disabled.
-    }
-    \item [Keyclick repeats.] This setting turns keyclick repeats \setting{On}
-      and \setting{Off}. If set to \setting{On}, the keyclicks will be
-      repeated when you hold down a button. If set to \setting{Off}, you will
-      hear only one click.
-    \end{description}
-}
+\subsection{Keyclick}
+  This menu controls key clicks on button presses.
+  \begin{description}
+  \opt{hardware_click}{
+    \item [Headphone Keyclick. ]This setting controls how strong the keyclicks
+      played through the headphones are. If set to \setting{Off}, the keyclicks
+      will be disabled.
+    \item [Speaker Keyclick. ]This setting turns playing of keyclicks through
+      the built in speaker \setting{On} or \setting{Off}.
+  }
+  \nopt{hardware_click}{
+    \item [Keyclick. ]This setting controls how strong the keyclicks are.
+      If set to \setting{Off}, the keyclicks will be disabled.
+  }
+  \item [Keyclick repeats.] This setting turns keyclick repeats \setting{On}
+    and \setting{Off}. If set to \setting{On}, the keyclicks will be
+    repeated when you hold down a button. If set to \setting{Off}, you will
+    hear only one click.
+  \end{description}
 
 \opt{touchpad}{
   \subsection{Touchpad}
@@ -850,6 +848,12 @@ therefore result in better runtime.
             \end{btnmap}
     }}
     \end{description}
+}
+\opt{usb_power}{
+  \subsection{USB Mode}
+    This controls what happens with the \dap{}'s USB port is connected.
+    \setting{Charge Only} and \setting{Mass Storage} will automatically enter
+    that mode, and \setting{Ask} will prompt the user each time.
 }
 \opt{multidrive_usb}{
   \subsection{USB Hide Internal Drive}

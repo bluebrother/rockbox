@@ -389,7 +389,7 @@ static const char* formatter_time_unit_0_is_always(char *buffer, size_t buffer_s
     (void) buffer_size;
     (void) unit;
     if (val == -1)
-        return str(LANG__NEVER);
+        return str(LANG_NEVER);
     else if (val == 0)
         return str(LANG_ALWAYS);
     return buffer;
@@ -398,7 +398,7 @@ static const char* formatter_time_unit_0_is_always(char *buffer, size_t buffer_s
 static int32_t getlang_time_unit_0_is_always(int value, int unit)
 {
     if (value == -1)
-        return LANG__NEVER;
+        return LANG_NEVER;
     else if (value == 0)
         return LANG_ALWAYS;
     else
@@ -2156,17 +2156,31 @@ const struct settings_list settings[] = {
                    "Interactive",
                    "Powersave",
                    "Performance"),
+#endif
+#if defined(HAVE_USB_POWER) && !defined(USB_NONE) && !defined(SIMULATOR)
     CHOICE_SETTING(0,
                    usb_mode,
-                   LANG_IBASSO_USB_MODE,
-                   USB_MODE_MASS_STORAGE,
+                   LANG_USB_MODE,
+                   USBMODE_DEFAULT,
                    "usb mode",
-                   "mass storage,charge,adb",
-                   ibasso_set_usb_mode,
+                   "ask,mass storage,charge"
+#if defined(DX50) || defined(DX90)
+                   ",adb"
+#endif
+                   ,
+                   usb_set_mode,
+#if defined(DX50) || defined(DX90)
+                   4,
+#else
                    3,
-                   ID2P(LANG_IBASSO_USB_MODE_MASS_STORAGE),
-                   ID2P(LANG_IBASSO_USB_MODE_CHARGE),
-                   ID2P(LANG_IBASSO_USB_MODE_ADB)),
+#endif
+                   ID2P(LANG_ASK),
+                   ID2P(LANG_USB_MODE_MASS_STORAGE),
+                   ID2P(LANG_USB_MODE_CHARGE)
+#if defined(DX50) || defined(DX90)
+                   ,ID2P(LANG_USB_MODE_ADB)
+#endif
+	    ),
 #endif
 };
 

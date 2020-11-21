@@ -26,53 +26,60 @@
 const static struct {
     SystemInfo::SystemInfos info;
     const char* name;
-    const char* def;
 } SystemInfosList[] = {
-    { SystemInfo::ManualUrl,            "manual_url",           "" },
-    { SystemInfo::BleedingUrl,          "bleeding_url",         "" },
-    { SystemInfo::BootloaderUrl,        "bootloader_url",       "" },
-    { SystemInfo::BootloaderInfoUrl,    "bootloader_info_url",  "" },
-    { SystemInfo::ReleaseFontUrl,       "release_font_url",     "" },
-    { SystemInfo::DailyFontUrl,         "daily_font_url",       "" },
-    { SystemInfo::DailyVoiceUrl,        "daily_voice_url",      "" },
-    { SystemInfo::ReleaseVoiceUrl,      "release_voice_url",    "" },
-    { SystemInfo::DoomUrl,              "doom_url",             "" },
-    { SystemInfo::Duke3DUrl,            "duke3d_url",           "" },
-    { SystemInfo::PuzzFontsUrl,         "puzzfonts_url",        "" },
-    { SystemInfo::QuakeUrl,             "quake_url",            "" },
-    { SystemInfo::Wolf3DUrl,            "wolf3d_url",           "" },
-    { SystemInfo::XWorldUrl,            "xworld_url",           "" },
-    { SystemInfo::ReleaseUrl,           "release_url",          "" },
-    { SystemInfo::DailyUrl,             "daily_url",            "" },
-    { SystemInfo::BuildInfoUrl,         "build_info_url",       "" },
-    { SystemInfo::GenlangUrl,           "genlang_url",          "" },
-    { SystemInfo::ThemesUrl,            "themes_url",           "" },
-    { SystemInfo::ThemesInfoUrl,        "themes_info_url",      "" },
-    { SystemInfo::RbutilUrl,            "rbutil_url",           "" },
-    { SystemInfo::CurPlatformName,      ":platform:/name",      "" },
-    { SystemInfo::CurManual,            ":platform:/manualname","rockbox-:platform:" },
-    { SystemInfo::CurBootloaderMethod,  ":platform:/bootloadermethod", "none" },
-    { SystemInfo::CurBootloaderName,    ":platform:/bootloadername", "" },
-    { SystemInfo::CurBootloaderFile,    ":platform:/bootloaderfile", "" },
-    { SystemInfo::CurBootloaderFilter,  ":platform:/bootloaderfilter", "" },
-    { SystemInfo::CurEncoder,           ":platform:/encoder",   "" },
-    { SystemInfo::CurBrand,             ":platform:/brand",     "" },
-    { SystemInfo::CurName,              ":platform:/name",      "" },
-    { SystemInfo::CurBuildserverModel,  ":platform:/buildserver_modelname", "" },
-    { SystemInfo::CurConfigureModel,    ":platform:/configure_modelname", "" },
-    { SystemInfo::CurPlayerPicture,     ":platform:/playerpic", "" },
+    { SystemInfo::ManualUrl,            "manual_url"          },
+    { SystemInfo::BleedingUrl,          "bleeding_url"        },
+    { SystemInfo::BootloaderUrl,        "bootloader_url"      },
+    { SystemInfo::BootloaderInfoUrl,    "bootloader_info_url" },
+    { SystemInfo::ReleaseFontUrl,       "release_font_url"    },
+    { SystemInfo::DailyFontUrl,         "daily_font_url"      },
+    { SystemInfo::DailyVoiceUrl,        "daily_voice_url"     },
+    { SystemInfo::ReleaseVoiceUrl,      "release_voice_url"   },
+    { SystemInfo::DoomUrl,              "doom_url"            },
+    { SystemInfo::Duke3DUrl,            "duke3d_url"          },
+    { SystemInfo::PuzzFontsUrl,         "puzzfonts_url"       },
+    { SystemInfo::QuakeUrl,             "quake_url"           },
+    { SystemInfo::Wolf3DUrl,            "wolf3d_url"          },
+    { SystemInfo::XWorldUrl,            "xworld_url"          },
+    { SystemInfo::ReleaseUrl,           "release_url"         },
+    { SystemInfo::CandidateUrl,         "rc_url"              },
+    { SystemInfo::DailyUrl,             "daily_url"           },
+    { SystemInfo::BuildInfoUrl,         "build_info_url"      },
+    { SystemInfo::GenlangUrl,           "genlang_url"         },
+    { SystemInfo::ThemesUrl,            "themes_url"          },
+    { SystemInfo::ThemesInfoUrl,        "themes_info_url"     },
+    { SystemInfo::RbutilUrl,            "rbutil_url"          },
 };
 
-//! pointer to setting object to NULL
-QSettings* SystemInfo::systemInfos = NULL;
+const static struct {
+    SystemInfo::PlatformInfo info;
+    const char* name;
+    const char* def;
+} PlatformInfosList[] = {
+    { SystemInfo::PlatformName,     ":platform:/name",      "" },
+    { SystemInfo::Manual,           ":platform:/manualname","rockbox-:platform:" },
+    { SystemInfo::BootloaderMethod, ":platform:/bootloadermethod", "none" },
+    { SystemInfo::BootloaderName,   ":platform:/bootloadername", "" },
+    { SystemInfo::BootloaderFile,   ":platform:/bootloaderfile", "" },
+    { SystemInfo::BootloaderFilter, ":platform:/bootloaderfilter", "" },
+    { SystemInfo::Encoder,          ":platform:/encoder",   "" },
+    { SystemInfo::Brand,            ":platform:/brand",     "" },
+    { SystemInfo::Name,             ":platform:/name",      "" },
+    { SystemInfo::BuildserverModel, ":platform:/buildserver_modelname", "" },
+    { SystemInfo::ConfigureModel,   ":platform:/configure_modelname", "" },
+    { SystemInfo::PlayerPicture,    ":platform:/playerpic", "" },
+};
+
+//! pointer to setting object to nullptr
+QSettings* SystemInfo::systemInfos = nullptr;
 
 void SystemInfo::ensureSystemInfoExists()
 {
     //check and create settings object
-    if(systemInfos == NULL)
+    if(systemInfos == nullptr)
     {
         // only use built-in rbutil.ini
-        systemInfos = new QSettings(":/ini/rbutil.ini", QSettings::IniFormat, 0);
+        systemInfos = new QSettings(":/ini/rbutil.ini", QSettings::IniFormat);
     }
 }
 
@@ -85,27 +92,26 @@ QVariant SystemInfo::value(enum SystemInfos info)
     int i = 0;
     while(SystemInfosList[i].info != info)
         i++;
-    QString platform = RbSettings::value(RbSettings::CurrentPlatform).toString();
     QString s = SystemInfosList[i].name;
-    s.replace(":platform:", platform);
-    QString d = SystemInfosList[i].def;
-    d.replace(":platform:", platform);
-    LOG_INFO() << "GET:" << s << systemInfos->value(s, d).toString();
-    return systemInfos->value(s, d);
+    LOG_INFO() << "GET:" << s << systemInfos->value(s).toString();
+    return systemInfos->value(s);
 }
 
-QVariant SystemInfo::platformValue(QString platform, enum SystemInfos info)
+QVariant SystemInfo::platformValue(enum PlatformInfo info, QString platform)
 {
     ensureSystemInfoExists();
 
     // locate setting item
     int i = 0;
-    while(SystemInfosList[i].info != info)
+    while(PlatformInfosList[i].info != info)
         i++;
 
-    QString s = SystemInfosList[i].name;
+    if (platform.isEmpty())
+        platform = RbSettings::value(RbSettings::CurrentPlatform).toString();
+
+    QString s = PlatformInfosList[i].name;
     s.replace(":platform:", platform);
-    QString d = SystemInfosList[i].def;
+    QString d = PlatformInfosList[i].def;
     d.replace(":platform:", platform);
     LOG_INFO() << "GET P:" << s << systemInfos->value(s, d).toString();
     return systemInfos->value(s, d);
@@ -194,7 +200,7 @@ QMap<int, QStringList> SystemInfo::usbIdMap(enum MapType type)
         int j = ids.size();
         while(j--) {
             QStringList l;
-            int id = ids.at(j).toInt(0, 16);
+            int id = ids.at(j).toInt(nullptr, 16);
             if(id == 0) {
                 continue;
             }
