@@ -42,9 +42,6 @@ const static struct {
     { ServerInfo::RelCandidateVersion,  "release-candidate/:platform:", "" },
     { ServerInfo::RelCandidateUrl,      "release-candidate/:platform:", "" },
     { ServerInfo::CurStatus,            "status/:platform:",            "-1" },
-    { ServerInfo::ManualPdfUrl,         "",                             "" },
-    { ServerInfo::ManualHtmlUrl,        "",                             "" },
-    { ServerInfo::ManualZipUrl,         "",                             "" },
     { ServerInfo::BleedingRevision,     "bleeding/rev",                 "" },
     { ServerInfo::BleedingDate,         "bleeding/timestamp",           "" },
     { ServerInfo::CurDevelUrl,          "",                             "" },
@@ -95,35 +92,21 @@ QVariant ServerInfo::platformValue(enum ServerInfos info, QString platform)
             if(value.toStringList().size() > 1)
                 value = value.toStringList().at(1);
             else if(!version.isEmpty() && info == CurReleaseUrl)
-                value = SystemInfo::value(SystemInfo::ReleaseUrl).toString()
+                value = SystemInfo::value(SystemInfo::BuildUrl,
+                                          SystemInfo::BuildRelease).toString()
                     .replace("%MODEL%", platform)
                     .replace("%RELVERSION%", version);
             else if(!version.isEmpty() && info == RelCandidateUrl)
-                value = SystemInfo::value(SystemInfo::CandidateUrl).toString()
+                value = SystemInfo::value(SystemInfo::BuildUrl,
+                                          SystemInfo::BuildCandidate).toString()
                     .replace("%MODEL%", platform)
                     .replace("%RELVERSION%", version);
         }
         break;
     case CurDevelUrl:
-        value = SystemInfo::value(SystemInfo::BleedingUrl).toString()
+        value = SystemInfo::value(SystemInfo::BuildUrl,
+                                  SystemInfo::BuildCurrent).toString()
                 .replace("%MODEL%", platform);
-        break;
-    case ManualPdfUrl:
-    case ManualZipUrl:
-    case ManualHtmlUrl:
-        {
-            QString url = SystemInfo::value(SystemInfo::ManualUrl).toString();
-            QString modelman = SystemInfo::platformValue(
-                    SystemInfo::Manual, platform).toString();
-            url.replace("%MODEL%", modelman.isEmpty() ? platform : modelman);
-            if(info == ManualPdfUrl)
-                url.replace("%FORMAT%", ".pdf");
-            else if(info == ManualZipUrl)
-                url.replace("%FORMAT%", "-html.zip");
-            else if(info == ManualHtmlUrl)
-                url.replace("%FORMAT%", "/rockbox-build.html");
-            value = url;
-        }
         break;
     case BleedingDate:
         // TODO: get rid of this, it's location specific.
