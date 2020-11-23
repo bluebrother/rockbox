@@ -41,6 +41,8 @@ const static struct {
     { ServerInfo::CurReleaseUrl,        "release/:platform:",           "" },
     { ServerInfo::RelCandidateVersion,  "release-candidate/:platform:", "" },
     { ServerInfo::RelCandidateUrl,      "release-candidate/:platform:", "" },
+    { ServerInfo::DailyVersion,         "daily/:platform:",             "" },
+    { ServerInfo::DailyUrl,             "daily/:platform:",             "" },
     { ServerInfo::CurStatus,            "status/:platform:",            "-1" },
     { ServerInfo::BleedingRevision,     "bleeding/rev",                 "" },
     { ServerInfo::BleedingDate,         "bleeding/timestamp",           "" },
@@ -83,10 +85,12 @@ QVariant ServerInfo::platformValue(enum ServerInfos info, QString platform)
     switch(info) {
     case CurReleaseVersion:
     case RelCandidateVersion:
+    case DailyVersion:
         value = value.toStringList().at(0);
         break;
     case CurReleaseUrl:
     case RelCandidateUrl:
+    case DailyUrl:
         {
             QString version = value.toStringList().at(0);
             if(value.toStringList().size() > 1)
@@ -99,6 +103,11 @@ QVariant ServerInfo::platformValue(enum ServerInfos info, QString platform)
             else if(!version.isEmpty() && info == RelCandidateUrl)
                 value = SystemInfo::value(SystemInfo::BuildUrl,
                                           SystemInfo::BuildCandidate).toString()
+                    .replace("%MODEL%", platform)
+                    .replace("%RELVERSION%", version);
+            else if(!version.isEmpty() && info == DailyUrl)
+                value = SystemInfo::value(SystemInfo::BuildUrl,
+                                          SystemInfo::BuildDaily).toString()
                     .replace("%MODEL%", platform)
                     .replace("%RELVERSION%", version);
         }

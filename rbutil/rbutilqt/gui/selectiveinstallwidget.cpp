@@ -124,6 +124,8 @@ void SelectiveInstallWidget::updateVersion(void)
                               ServerInfo::BleedingRevision).toString());
         m_versions.insert(SystemInfo::BuildCandidate, ServerInfo::instance()->platformValue(
                               ServerInfo::RelCandidateVersion).toString());
+        m_versions.insert(SystemInfo::BuildDaily, ServerInfo::instance()->platformValue(
+                              ServerInfo::DailyVersion).toString());
     }
 
     ui.selectedVersion->clear();
@@ -139,20 +141,23 @@ void SelectiveInstallWidget::updateVersion(void)
         ui.selectedVersion->addItem(tr("Release Candidate (Revison %1)").arg(
                     m_versions[SystemInfo::BuildCandidate]), SystemInfo::BuildCandidate);
     }
+    if(!m_versions[SystemInfo::BuildDaily].isEmpty()) {
+        ui.selectedVersion->addItem(tr("Daily Build (%1)").arg(
+                    m_versions[SystemInfo::BuildDaily]), SystemInfo::BuildDaily);
+    }
 
     // select previously selected version
-    int index = ui.selectedVersion->findData(RbSettings::value(RbSettings::Build).toString());
-    if(index != -1) {
-        ui.selectedVersion->setCurrentIndex(index);
+    int index = ui.selectedVersion->findData(
+                static_cast<SystemInfo::BuildType>(RbSettings::value(RbSettings::Build).toInt()));
+    if(index < 0) {
+        if(!m_versions[SystemInfo::BuildRelease].isEmpty()) {
+            index = ui.selectedVersion->findData(SystemInfo::BuildRelease);
+        }
+        else {
+            index = ui.selectedVersion->findData(SystemInfo::BuildCurrent);
+        }
     }
-    else if(!m_versions[SystemInfo::BuildRelease].isEmpty()) {
-        index = ui.selectedVersion->findData("release");
-        ui.selectedVersion->setCurrentIndex(index);
-    }
-    else {
-        index = ui.selectedVersion->findData("development");
-        ui.selectedVersion->setCurrentIndex(index);
-    }
+    ui.selectedVersion->setCurrentIndex(index);
     // check if Rockbox is installed. If it is untick the bootloader option, as
     // well as if the selected player doesn't need a bootloader.
     if(m_blmethod == "none") {
@@ -450,6 +455,9 @@ void SelectiveInstallWidget::installRockbox(void)
             url = ServerInfo::instance()->platformValue(
                         ServerInfo::RelCandidateUrl, m_target).toString();
             break;
+        case SystemInfo::BuildDaily:
+            url = ServerInfo::instance()->platformValue(
+                        ServerInfo::DailyUrl, m_target).toString();
         }
         //! install build
         if(m_zipinstaller != nullptr) m_zipinstaller->deleteLater();
@@ -537,7 +545,7 @@ void SelectiveInstallWidget::installVoicefile(void)
         if(m_zipinstaller != nullptr) m_zipinstaller->deleteLater();
         m_zipinstaller = new ZipInstaller(this);
         m_zipinstaller->setUrl(voiceurl);
-        m_zipinstaller->setLogSection("Voice (" + lang + ")");
+        m_zipinstaller->setLogSection("Prerendered Voice (" + lang + ")");
         m_zipinstaller->setLogVersion(logversion);
         m_zipinstaller->setMountPoint(m_mountpoint);
         if(!RbSettings::value(RbSettings::CacheDisabled).toBool())
@@ -586,7 +594,7 @@ void SelectiveInstallWidget::installManual(void)
         if(m_zipinstaller != nullptr) m_zipinstaller->deleteLater();
         m_zipinstaller = new ZipInstaller(this);
         m_zipinstaller->setUrl(manualurl);
-        m_zipinstaller->setLogSection("Manual Voice (" + mantype + ")");
+        m_zipinstaller->setLogSection("Manual (" + mantype + ")");
         m_zipinstaller->setLogVersion(logversion);
         m_zipinstaller->setMountPoint(m_mountpoint);
         if(!RbSettings::value(RbSettings::CacheDisabled).toBool())
