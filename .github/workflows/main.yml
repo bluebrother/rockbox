@@ -50,7 +50,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: RockboxUtility-x86_64-${GITHUB_SHA}.AppImage
+          name: RockboxUtility-x86_64-${{ github.sha }}.AppImage
           path: ${{ github.workspace }}/build/Rockbox*.AppImage
 
 
@@ -86,7 +86,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: RockboxUtility-${GITHUB_SHA}.dmg
+          name: RockboxUtility-${{ github.sha }}.dmg
           path: ${{ github.workspace }}/build/Rockbox*.dmg
 
 
