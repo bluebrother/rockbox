@@ -32,7 +32,7 @@ jobs:
           cached: ${{ steps.cache-qt.outputs.cache-hit }}
 
       - name: Install distro packages
-        run: sudo apt-get install libusb-1.0-0-dev gstreamer1.0-plugins-base libxcb-icccm4 libxcb-image0
+        run: sudo apt-get install libusb-1.0-0-dev gstreamer1.0-plugins-base qt5-default
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout
