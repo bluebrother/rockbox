@@ -35,8 +35,7 @@
 #include "system.h"
 #include "systrace.h"
 #include "rbsettings.h"
-#include "serverinfo.h"
-#include "systeminfo.h"
+#include "playerbuildinfo.h"
 #include "ziputil.h"
 #include "infowidget.h"
 #include "selectiveinstallwidget.h"
@@ -224,7 +223,7 @@ void RbUtilQt::downloadInfo()
     ui.statusbar->showMessage(tr("Downloading build information, please wait ..."));
     LOG_INFO() << "downloading build info";
     daily->setFile(&buildInfo);
-    daily->getFile(QUrl(SystemInfo::value(SystemInfo::BuildInfoUrl).toString()));
+    daily->getFile(QUrl(PlayerBuildInfo::instance()->value(PlayerBuildInfo::BuildInfoUrl).toString()));
 }
 
 
@@ -241,9 +240,9 @@ void RbUtilQt::downloadDone(bool error)
     }
     LOG_INFO() << "network status:" << daily->errorString();
 
-    // read info into ServerInfo object
+    // read info into PlayerBuildInfo object
     buildInfo.open();
-    ServerInfo::instance()->readBuildInfo(buildInfo.fileName());
+    PlayerBuildInfo::instance()->setBuildInfo(buildInfo.fileName());
     buildInfo.close();
 
     ui.statusbar->showMessage(tr("Download build information finished."), 5000);
@@ -380,11 +379,11 @@ void RbUtilQt::updateDevice()
 
     /* Enable bootloader installation, if possible */
     bool bootloaderInstallable =
-        SystemInfo::platformValue(SystemInfo::BootloaderMethod) != "none";
+        PlayerBuildInfo::instance()->value(PlayerBuildInfo::BootloaderMethod).toString() != "none";
 
     /* Enable bootloader uninstallation, if possible */
     bool bootloaderUninstallable = bootloaderInstallable &&
-        SystemInfo::platformValue(SystemInfo::BootloaderMethod) != "fwpatcher";
+        PlayerBuildInfo::instance()->value(PlayerBuildInfo::BootloaderMethod) != "fwpatcher";
     ui.labelRemoveBootloader->setEnabled(bootloaderUninstallable);
     ui.buttonRemoveBootloader->setEnabled(bootloaderUninstallable);
     ui.actionRemove_bootloader->setEnabled(bootloaderUninstallable);
@@ -395,10 +394,11 @@ void RbUtilQt::updateDevice()
     ui.menuA_ctions->setEnabled(configurationValid);
 
     // displayed device info
-    QString brand = SystemInfo::platformValue(SystemInfo::Brand).toString();
+    QString brand = PlayerBuildInfo::instance()->value(PlayerBuildInfo::Brand).toString();
     QString name
-        = QString("%1 (%2)").arg(SystemInfo::platformValue(SystemInfo::Name).toString(),
-            ServerInfo::instance()->statusAsString());
+        = QString("%1 (%2)").arg(
+            PlayerBuildInfo::instance()->value(PlayerBuildInfo::DisplayName).toString(),
+            PlayerBuildInfo::instance()->statusAsString());
     ui.labelDevice->setText(QString("<b>%1 %2</b>").arg(brand, name));
 
     QString mountpoint = RbSettings::value(RbSettings::Mountpoint).toString();
@@ -413,7 +413,7 @@ void RbUtilQt::updateDevice()
     }
 
     QPixmap pm;
-    QString m = SystemInfo::platformValue(SystemInfo::PlayerPicture).toString();
+    QString m = PlayerBuildInfo::instance()->value(PlayerBuildInfo::PlayerPicture).toString();
     pm.load(":/icons/players/" + m + "-small.png");
     pm = pm.scaledToHeight(QFontMetrics(QApplication::font()).height() * 3);
     ui.labelPlayerPic->setPixmap(pm);
@@ -478,14 +478,14 @@ void RbUtilQt::uninstallBootloader(void)
     // create installer
     BootloaderInstallBase *bl
         = BootloaderInstallHelper::createBootloaderInstaller(this,
-                SystemInfo::platformValue(SystemInfo::BootloaderMethod).toString());
+                PlayerBuildInfo::instance()->value(PlayerBuildInfo::BootloaderMethod).toString());
 
     if(bl == nullptr) {
         logger->addItem(tr("No uninstall method for this target known."), LOGERROR);
         logger->setFinished();
         return;
     }
-    QStringList blfile = SystemInfo::platformValue(SystemInfo::BootloaderFile).toStringList();
+    QStringList blfile = PlayerBuildInfo::instance()->value(PlayerBuildInfo::BootloaderFile).toStringList();
     QStringList blfilepath;
     for(int a = 0; a < blfile.size(); a++) {
         blfilepath.append(RbSettings::value(RbSettings::Mountpoint).toString()
@@ -610,8 +610,8 @@ bool RbUtilQt::chkConfig(QWidget *parent)
 
 void RbUtilQt::checkUpdate(void)
 {
-    QString url = SystemInfo::value(SystemInfo::RbutilUrl).toString();
-#if defined(Q_OS_WIN32)   
+    QString url = PlayerBuildInfo::instance()->value(PlayerBuildInfo::RbutilUrl).toString();
+#if defined(Q_OS_WIN32)
     url += "win32/";
 #elif defined(Q_OS_LINUX)
     url += "linux/";
@@ -678,8 +678,8 @@ void RbUtilQt::downloadUpdateDone(bool error)
         // if we found something newer, display info
         if(foundVersion != "")
         {
-            QString url = SystemInfo::value(SystemInfo::RbutilUrl).toString();
-#if defined(Q_OS_WIN32)   
+            QString url = PlayerBuildInfo::instance()->value(PlayerBuildInfo::RbutilUrl).toString();
+#if defined(Q_OS_WIN32)
             url += "win32/";
 #elif defined(Q_OS_LINUX)
             url += "linux/";
@@ -707,7 +707,7 @@ void RbUtilQt::changeEvent(QEvent *e)
     if(e->type() == QEvent::LanguageChange) {
         ui.retranslateUi(this);
         buildInfo.open();
-        ServerInfo::instance()->readBuildInfo(buildInfo.fileName());
+        PlayerBuildInfo::instance()->setBuildInfo(buildInfo.fileName());
         buildInfo.close();
         updateDevice();
     } else {

@@ -33,8 +33,7 @@
 #include "system.h"
 #include "encttscfggui.h"
 #include "rbsettings.h"
-#include "serverinfo.h"
-#include "systeminfo.h"
+#include "playerbuildinfo.h"
 #include "utils.h"
 #include "comboboxviewdelegate.h"
 #if defined(Q_OS_WIN32)
@@ -346,18 +345,20 @@ void Config::setDevices()
     // setup devices table
     LOG_INFO() << "setting up devices list";
 
-    QStringList platformList;
+    QStringList targets;
     if(ui.showDisabled->isChecked())
-        platformList = SystemInfo::platforms(SystemInfo::PlatformAllDisabled);
+        targets = PlayerBuildInfo::instance()->value(
+                    PlayerBuildInfo::TargetNamesAll).toStringList();
     else
-        platformList = SystemInfo::platforms(SystemInfo::PlatformAll);
+        targets = PlayerBuildInfo::instance()->value(
+                    PlayerBuildInfo::TargetNamesEnabled).toStringList();
 
     QMultiMap <QString, QString> manuf;
-    for(int it = 0; it < platformList.size(); it++)
+    for(int it = 0; it < targets.size(); it++)
     {
-        QString curbrand = SystemInfo::platformValue(
-                    SystemInfo::Brand, platformList.at(it)).toString();
-        manuf.insert(curbrand, platformList.at(it));
+        QString curbrand = PlayerBuildInfo::instance()->value(
+                    PlayerBuildInfo::Brand, targets.at(it)).toString();
+        manuf.insert(curbrand, targets.at(it));
     }
 
     // set up devices table
@@ -379,19 +380,20 @@ void Config::setDevices()
         w->setText(0, brands.at(c));
         items.append(w);
         // go through platforms and add all players matching the current brand
-        for(int it = 0; it < platformList.size(); it++) {
+        for(int it = 0; it < targets.size(); it++) {
             // skip if not current brand
-            if(!manuf.values(brands.at(c)).contains(platformList.at(it)))
+            if(!manuf.values(brands.at(c)).contains(targets.at(it)))
                 continue;
             // construct display name
-            QString curname = SystemInfo::platformValue(
-                SystemInfo::Name, platformList.at(it)).toString()
-                + " (" + ServerInfo::instance()->statusAsString(platformList.at(it)) + ")";
+            QString curname = QString("%1 (%2)").arg(
+                PlayerBuildInfo::instance()->value(PlayerBuildInfo::DisplayName,
+                                                   targets.at(it)).toString(),
+                PlayerBuildInfo::instance()->statusAsString(targets.at(it)));
             LOG_INFO() << "add supported device:" << brands.at(c) << curname;
             w2 = new QTreeWidgetItem(w, QStringList(curname));
-            w2->setData(0, Qt::UserRole, platformList.at(it));
+            w2->setData(0, Qt::UserRole, targets.at(it));
 
-            if(platformList.at(it) == selected) {
+            if(targets.at(it) == selected) {
                 w2->setSelected(true);
                 w->setExpanded(true);
                 w3 = w2; // save pointer to hilight old selection
@@ -470,10 +472,10 @@ void Config::updateEncState()
         return;
 
     QString devname = ui.treeDevices->selectedItems().at(0)->data(0, Qt::UserRole).toString();
-    QString encoder = SystemInfo::platformValue(
-                        SystemInfo::Encoder, devname).toString();
-    ui.encoderName->setText(EncoderBase::getEncoderName(SystemInfo::platformValue(
-                        SystemInfo::Encoder, devname).toString()));
+    QString encoder = PlayerBuildInfo::instance()->value(
+                        PlayerBuildInfo::Encoder, devname).toString();
+    ui.encoderName->setText(EncoderBase::getEncoderName(
+            PlayerBuildInfo::instance()->value(PlayerBuildInfo::Encoder, devname).toString()));
 
     EncoderBase* enc = EncoderBase::getEncoder(this,encoder);
 
@@ -741,8 +743,9 @@ void Config::autodetect()
                 mp = tr("(unknown)");
             }
             msg += QString("<li>%1</li>").arg(tr("%1 at %2").arg(
-                        SystemInfo::platformValue(
-                            SystemInfo::PlatformName, detected.at(i).device).toString(),
+                        PlayerBuildInfo::instance()->value(
+                            PlayerBuildInfo::DisplayName,
+                            detected.at(i).device).toString(),
                         QDir::toNativeSeparators(mp)));
         }
         msg += "</ul>";
@@ -767,22 +770,25 @@ void Config::autodetect()
             case Autodetection::PlayerIncompatible:
                 msg += tr("Detected an unsupported player:\n%1\n"
                           "Sorry, Rockbox doesn't run on your player.")
-                          .arg(SystemInfo::platformValue(
-                               SystemInfo::Name, detected.at(0).device).toString());
+                          .arg(PlayerBuildInfo::instance()->value(
+                                   PlayerBuildInfo::DisplayName,
+                                   detected.at(0).device).toString());
                 break;
             case Autodetection::PlayerMtpMode:
                 msg = tr("%1 in MTP mode found!\n"
                          "You need to change your player to MSC mode for installation. ")
-                         .arg(SystemInfo::platformValue(
-                                    SystemInfo::Name, detected.at(0).device).toString());
+                         .arg(PlayerBuildInfo::instance()->value(
+                                  PlayerBuildInfo::DisplayName,
+                                  detected.at(0).device).toString());
                 break;
             case Autodetection::PlayerWrongFilesystem:
-                if(SystemInfo::platformValue(
-                            SystemInfo::BootloaderMethod, detected.at(0).device) == "ipod") {
+                if(PlayerBuildInfo::instance()->value(
+                            PlayerBuildInfo::BootloaderMethod, detected.at(0).device) == "ipod") {
                     msg = tr("%1 \"MacPod\" found!\n"
                             "Rockbox needs a FAT formatted Ipod (so-called \"WinPod\") "
-                            "to run. ").arg(SystemInfo::platformValue(
-                                    SystemInfo::Name, detected.at(0).device).toString());
+                            "to run. ").arg(PlayerBuildInfo::instance()->value(
+                                                PlayerBuildInfo::DisplayName,
+                                                detected.at(0).device).toString());
                 }
                 else {
                     msg = tr("The player contains an incompatible filesystem.\n"
@@ -961,10 +967,11 @@ void Config::configEnc()
         return;
 
     QString devname = ui.treeDevices->selectedItems().at(0)->data(0, Qt::UserRole).toString();
-    QString encoder = SystemInfo::platformValue(
-                    SystemInfo::Encoder, devname).toString();
-    ui.encoderName->setText(EncoderBase::getEncoderName(SystemInfo::platformValue(
-                    SystemInfo::Encoder, devname).toString()));
+    QString encoder = PlayerBuildInfo::instance()->value(
+                    PlayerBuildInfo::Encoder, devname).toString();
+    ui.encoderName->setText(
+            EncoderBase::getEncoderName(PlayerBuildInfo::instance()->value(
+                                            PlayerBuildInfo::Encoder, devname).toString()));
 
 
     EncoderBase* enc = EncoderBase::getEncoder(this,encoder);

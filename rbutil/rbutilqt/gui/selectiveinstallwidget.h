@@ -24,7 +24,7 @@
 #include "progressloggergui.h"
 #include "zipinstaller.h"
 #include "themesinstallwindow.h"
-#include "systeminfo.h"
+#include "playerbuildinfo.h"
 
 class SelectiveInstallWidget : public QWidget
 {
@@ -41,6 +41,7 @@ class SelectiveInstallWidget : public QWidget
         void continueInstall(bool);
         void customizeThemes(void);
         void selectedVersionChanged(int);
+        void updateVoiceLangs();
 
     private:
         void installBootloader(void);
@@ -49,7 +50,7 @@ class SelectiveInstallWidget : public QWidget
         void installVoicefile(void);
         void installManual(void);
         void installThemes(void);
-        void installGamefiles(void);
+        void installPluginData(void);
         void installBootloaderPost(void);
 
     signals:
@@ -65,9 +66,8 @@ class SelectiveInstallWidget : public QWidget
         ProgressLoggerGui *m_logger;
         int m_installStage;
         ZipInstaller *m_zipinstaller;
-        QMap<SystemInfo::BuildType, QString> m_versions;
         ThemesInstallWindow *m_themesinstaller;
-        SystemInfo::BuildType m_buildtype;
+        PlayerBuildInfo::BuildType m_buildtype;
 };
 
 #endif

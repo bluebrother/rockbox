@@ -17,7 +17,7 @@
  ****************************************************************************/
 
 #include "rbsettings.h"
-#include "systeminfo.h"
+#include "playerbuildinfo.h"
 #include <QSettings>
 #include "Logger.h"
 
@@ -46,7 +46,7 @@ const static struct {
     { RbSettings::InstallRockbox,       "install_rockbox",      "true" },
     { RbSettings::InstallFonts,         "install_fonts",        "true" },
     { RbSettings::InstallThemes,        "install_themes",       "false" },
-    { RbSettings::InstallGamefiles,     "install_gamefiles",    "true" },
+    { RbSettings::InstallPluginData,    "install_plugin_data",  "true" },
     { RbSettings::InstallVoice,         "install_voice",        "false" },
     { RbSettings::InstallManual,        "install_manual",       "false" },
 #if defined(Q_OS_WIN32)
@@ -196,7 +196,8 @@ QString RbSettings::constructSettingPath(QString path, QString substitute)
         }
         else {
             path.replace(":tts:", userSettings->value("tts").toString());
-            path.replace(":encoder:", SystemInfo::platformValue(SystemInfo::Encoder, platform).toString());
+            path.replace(":encoder:", PlayerBuildInfo::instance()->value(
+                             PlayerBuildInfo::Encoder, platform).toString());
         }
         path.replace(":platform:", platform);
     }
